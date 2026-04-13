@@ -1,8 +1,12 @@
 # Week 6: Production Monitoring and Caching with Langfuse and Redis
 
+> **中文说明：** **英中对照**，**英文保留**。Bilingual; **English preserved**.
+
 ## Overview
 
 Week 6 adds production-grade monitoring and intelligent caching to our RAG system. We integrate Langfuse for complete pipeline observability and Redis for high-performance response caching.
+
+> **中文 · 概述：** 第 6 周加入 **Langfuse**（追踪/分析）与 **Redis**（响应缓存），面向生产可观测性与性能优化。
 
 ## What We Built
 

@@ -1,5 +1,7 @@
 # Week 7: Agentic RAG with LangGraph + Telegram Bot
 
+> **中文说明：** **英中对照**，**英文保留**（文件较长，仅在关键小节附中文提要）。Bilingual; **English preserved** (Chinese summaries added at key sections).
+
 ## Overview
 
 Week 7 adds TWO major enhancements to the arXiv Paper Curator:

@@ -1,8 +1,12 @@
 # Week 4: Document Chunking and Hybrid Search
 
+> **中文说明：** **英中对照**，**英文保留**。下文在保留英文的同时补充中文释义。Bilingual; **English preserved**.
+
 ## Overview
 
 Week 4 implements a **production-grade hybrid search system** that combines the precision of BM25 keyword search with the semantic understanding of vector embeddings. This system provides the foundation for retrieval-augmented generation (RAG) by intelligently breaking documents into searchable chunks and enabling multiple search modes.
+
+> **中文 · 概述：** 第 4 周实现**生产级混合检索**：BM25 关键词 + 向量语义；通过智能分块与多种检索模式，为 RAG 打好检索层基础。
 
 ## What We Built
 

@@ -1,6 +1,10 @@
 # Week 2: arXiv API Integration & PDF Processing
 
+> **中文说明：** **英中对照**，**英文保留**；各节后附 **中文** 要点。Bilingual notes; **English preserved**.
+
 This folder contains the materials for Week 2 of the arXiv Paper Curator project, which focuses on building the core data ingestion pipeline that feeds fresh academic content into our RAG system.
+
+> **中文：** 第 2 周聚焦**数据摄入流水线**：从 arXiv 拉取论文、解析 PDF、写入数据库，为 RAG 提供新鲜语料。
 
 ## Contents
 

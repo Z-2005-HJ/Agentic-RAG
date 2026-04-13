@@ -1,8 +1,12 @@
 # Week 5: Complete RAG System with LLM Integration
 
+> **中文说明：** **英中对照**，**英文保留**。Bilingual; **English preserved**.
+
 ## Overview
 
 Week 5 completes our **production-grade RAG system** by integrating Ollama LLM with hybrid search. The system delivers **6x faster performance** (120s → 15-20s), real-time streaming, and includes a Gradio web interface.
+
+> **中文 · 概述：** 第 5 周将 **Ollama** 与混合检索打通，形成完整 RAG；包含流式与 Gradio；文中性能数字为课程示例，以你本机实测为准。
 
 ## What We Built
 

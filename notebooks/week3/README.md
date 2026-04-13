@@ -1,6 +1,10 @@
 # Week 3: Keyword Search First - The Critical Foundation
 
+> **中文说明：** **英中对照**，**英文保留**；下列 blockquote 与正文中的英文均保留，读者可对照各段落后补充的中文释义。Bilingual; **English preserved**.
+
 > **🚨 The 90% Problem:** Most RAG systems jump straight to vector search and miss the foundation that powers the best retrieval systems. We're doing it right!
+
+> **中文：** **「90% 问题」**：许多 RAG 直接做向量检索而忽略更强检索系统所依赖的底座；本课程先打牢关键词基础。
 
 This folder contains the materials for Week 3 of the arXiv Paper Curator project, where we implement the **keyword search foundation** that professional RAG systems rely on using OpenSearch and BM25 scoring.
 

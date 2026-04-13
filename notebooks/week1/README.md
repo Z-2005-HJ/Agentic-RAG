@@ -1,6 +1,10 @@
 # Week 1: Infrastructure Setup and Verification
 
+> **中文说明：** 以下为 **英中对照**：**保留英文原文**，在关键节后附 **中文** 释义。This folder README is **English–Chinese bilingual**: **English is preserved**, with **Chinese** notes added.
+
 This folder contains the materials for Week 1 of the arXiv Paper Curator project, which focuses on setting up and verifying the complete infrastructure stack.
+
+> **中文：** 本文件夹为**第 1 周**资料：搭建并**验证**整套基础设施（Docker、数据库、搜索、编排、本地 LLM 等）。
 
 ## Contents
 
@@ -43,6 +47,8 @@ A comprehensive Jupyter notebook that guides students through:
    - Common troubleshooting scenarios and solutions
 
 ## Learning Objectives
+
+> **中文 · 学习目标概述：** 完成本周材料后，你将能够……（具体条目见下方英文）。
 
 By completing this week's materials, students will:
 
