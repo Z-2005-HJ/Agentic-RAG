@@ -10,6 +10,8 @@ Week 6 adds production-grade monitoring and intelligent caching to our RAG syste
 
 ## What We Built
 
+> **中文 · 交付物：** **Langfuse** 负责全链路 span；**Redis** 对相同请求参数做 **精确匹配缓存**；二者与 Week 5 的 `/ask`、`/stream` 同栈集成。
+
 - **Langfuse Integration**: End-to-end RAG pipeline tracing and analytics
 - **Redis Caching**: 150-400x faster responses for repeated queries
 - **Performance Monitoring**: Real-time metrics and system health
@@ -29,6 +31,8 @@ Query → Cache Check → [Hit: ~100ms] | [Miss: Full Pipeline ~15s] → Cache S
 ```
 
 ## Key Features
+
+> **中文 · 功能：** 追踪面板用于看 **检索 vs 生成** 耗时；缓存命中时响应可降至毫秒级（示例中的倍数仅为理想对比）。
 
 ### **Langfuse Observability**
 - Complete RAG pipeline tracing with performance breakdowns

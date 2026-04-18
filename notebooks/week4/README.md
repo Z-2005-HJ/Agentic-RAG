@@ -97,6 +97,8 @@ POST /api/v1/hybrid-search/
 
 ## Key Features
 
+> **中文 · 检索模式：** 下表对比 **BM25 / 纯向量 / RRF 混合** 的延迟与适用场景；混合路径常包含 **Jina 嵌入 API** 调用，故总耗时可明显高于纯 BM25（以你本机与网络为准）。
+
 ### **Hybrid Search Modes**
 
 | Mode | Speed | Recall | Precision | Use Case |
@@ -128,6 +130,8 @@ SECTION_BASED = True    # Use document structure when available
 - **Scalability**: Handles documents from 1,000 to 100,000+ words
 
 ## Implementation Details
+
+> **中文 · 实现要点：** 索引字段需同时服务 **全文** 与 **kNN**；请求体与 mapping 片段以下文 JSON 为准，实际以仓库 `index_config_hybrid` 与 OpenSearch 版本为准。
 
 ### **OpenSearch Index Configuration**
 
@@ -369,6 +373,8 @@ curl -X POST "http://localhost:8000/api/v1/hybrid-search/" \
 ```
 
 ## Next Steps (Week 5)
+
+> **中文 · 过渡到 Week 5：** 当混合检索与分块索引稳定后，即可把 **检索结果块** 作为上下文接入 **Ollama** 生成答案（`/ask`）。
 
 Week 4 provides the search foundation for Week 5's LLM integration:
 

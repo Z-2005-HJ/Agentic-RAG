@@ -10,6 +10,8 @@ Week 5 completes our **production-grade RAG system** by integrating Ollama LLM w
 
 ## What We Built
 
+> **中文 · 交付物：** 下列英文列表对应 **`/ask`、SSE 式 `/stream`**、提示词瘦身与 **Gradio** 界面；性能数字为课程示例，请以本机实测为准。
+
 - **Local LLM Integration**: Ollama service with llama3.2 models
 - **Performance Optimization**: 80% prompt reduction, 6x speed improvement
 - **Streaming API**: Real-time responses via Server-Sent Events
@@ -68,6 +70,8 @@ uv run python gradio_launcher.py
 ```
 
 ## Performance
+
+> **中文 · 性能：** 下表给出不同 `top_k` 与检索模式的量级；首 token 时间、总耗时受 **模型体积、GPU/CPU、缓存** 影响较大。
 
 | Configuration | Response Time | Use Case |
 |--------------|---------------|----------|

@@ -8,13 +8,23 @@ COPY pyproject.toml uv.lock ./
 # UV_COMPILE_BYTECODE for generating .pyc files -> faster application startup.
 # UV_LINK_MODE=copy to silence warnings about not being able to use hard links
 # since the cache and sync target are on separate file systems.
-ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+# Increase HTTP timeout/retries for large dependency downloads on unstable networks.
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_HTTP_TIMEOUT=300 UV_HTTP_RETRIES=5
 
-# Install dependencies
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=/app/uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=/app/pyproject.toml \
-    uv sync --frozen --no-dev
+# Default PyPI index; override on restricted networks, e.g.:
+# docker compose build --build-arg UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple api
+ARG UV_INDEX_URL=https://pypi.org/simple
+ENV UV_INDEX_URL=${UV_INDEX_URL}
+
+# uv.lock pins wheels to files.pythonhosted.org; on some campus networks that host fails TLS.
+# Set UV_REWRITE_HOSTED_PACKAGES=true with a domestic mirror build (see UV_INDEX_URL above).
+ARG UV_REWRITE_HOSTED_PACKAGES=false
+RUN if [ "$UV_REWRITE_HOSTED_PACKAGES" = "true" ]; then \
+      sed -i 's|https://files.pythonhosted.org/packages|https://pypi.tuna.tsinghua.edu.cn/packages|g' uv.lock; \
+    fi
+
+# Install dependencies without BuildKit-only mount flags
+RUN uv sync --frozen --no-dev
 
 # Copy source code
 COPY src /app/src

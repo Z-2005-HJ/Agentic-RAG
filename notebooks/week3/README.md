@@ -40,6 +40,8 @@ cp .env.example .env
 
 **Important:** Week 3 requires the `.env` file to be properly configured for OpenSearch connectivity and indexing. The defaults in `.env.example` work out of the box.
 
+> **中文 · 启动前：** 先完成 **`.env`**（尤其 OpenSearch 主机与索引名），再 `docker compose up`；与 notebook 中 **健康检查 → 建索引 → 灌库 → BM25** 顺序一致。
+
 ## Contents
 
 ### `week3_opensearch.ipynb`
@@ -105,6 +107,8 @@ A comprehensive Jupyter notebook that guides you through building the keyword se
    - Performance benchmarking and response time measurement
    - Production readiness assessment with monitoring and alerting
 
+> **中文 · Notebook 结构：** 上列 1–8 与 `week3_opensearch.ipynb` 中章节一一对应；**Airflow** 小节侧重 DAG 与 OpenSearch 写入衔接，**BM25** 小节含双字母查询等课程要求用例。
+
 **Week 3 Architecture:**
 
 <p align="center">
@@ -115,6 +119,8 @@ A comprehensive Jupyter notebook that guides you through building the keyword se
 
 
 ## Key Features Implemented
+
+> **中文 · 功能清单：** 下列英文条目对应仓库中 **OpenSearch 客户端、Query Builder、索引 JSON、Search 路由** 等已实现模块；阅读时可将术语映射到 `src/services/opensearch/`。
 
 ### 🔍 **Production-Grade Search System**
 - **BM25 Scoring**: Industry-standard relevance ranking algorithm
@@ -142,6 +148,8 @@ A comprehensive Jupyter notebook that guides you through building the keyword se
 - **Code Quality**: Following established patterns from Week 1-2 implementations
 
 ## Expected Outcomes
+
+> **中文 · 学习产出：** 完成后应能独立说明 **BM25 分数含义**、多字段 **boost**、索引 **mapping** 与 **Postgres → OpenSearch** 数据路径，并会用 Search API 做简单调试。
 
 By completing Week 3, students will have:
 

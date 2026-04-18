@@ -16,7 +16,7 @@ Django：全能型重型框架，适合用在大项目知乎淘宝这种
 
 Docker 是一个用来打包、分发、运行应用的容器工具，
 让你的代码在哪都能一模一样跑起来，不会出现 “我电脑上好好的，服务器上就崩了” 的问题。
-也就是说docker像一个集装箱，吧代码、python、依赖库、配置都装进去，跑到任何服务器都能直接跑
+也就是说docker像一个集装箱，把代码、python、依赖库、配置都装进去，跑到任何服务器都能直接跑
 但是这个docker主要是给开发者、部署人员用的而不是给用户用的
 
 
@@ -30,3 +30,31 @@ uv.lock是给机器看的，pyproject.toml是给人看的，如果只有lock就�
 
 作为对比，requirement虽然可以写依赖，但是不写子依赖，所以子依赖不一样也会导致依赖包不一样。
 而且lock会自动维护升级，同时lock更安全：哈希校验（随机生成的一个码，像指纹一样）
+
+
+docker用容器化技术，给应用程序封装独立的运行环境，每个运行环境就是一个容器，运行容器的计算机被称为宿主机
+docker和虚拟机最大的区别是：每个虚拟机都包含一个操作系统的完整内核，但docker容器之间共用同一个系统内核，所以比虚拟机更轻更小
+镜像是容器的模板，可以把镜像类比成软件安装包，容器是安装出来的软件。docker镜像就像是模具，容器就像是用模具做出来的糕点
+可以用模具做出来很多一样的东西，同时也可以把模具分享给其他人使用，镜像仓库就是用来存放容器的地方
+
+
+Client（docker-cli）
+Docker 用户交互入口，通过命令行发送指令（pull/run/build/push），负责将命令转发给 Docker 守护进程。
+Docker Host（Docker 主机）
+核心执行环境，以 Docker Daemon 为中枢，管理本地的镜像（Images）和容器（Containers），完成镜像的存储、容器的创建与运行。
+Registry（应用市场）
+镜像存储与分发中心，用于公共或私有共享镜像，支持 Docker Daemon 拉取（pull）和推送（push）镜像。
+完整工作流
+拉取运行流程
+Client 执行docker pull → Docker Daemon 从 Registry 拉取镜像并存储到本地 → Client 执行docker run → Daemon 基于本地镜像启动容器。
+构建推送流程
+Client 执行docker build → Daemon 基于配置构建本地镜像 → Client 执行docker push → Daemon 将本地镜像上传到 Registry，实现共享。
+
+传统部署，应用之间不隔离，会相互挤占
+虚拟化部署：分割成不同的虚拟机，这样的话单个虚拟机炸了不会影响到别的虚拟机，有了隔离机制，但是每个虚拟机都有各自的操作系统
+这样就很笨重
+所以用容器部署：不同的容器用相同的操作系统，更轻便
+docker底层使用linux技术，所以window要用的话，要装一个docker desktop，
+直接用cursor给我装docker desktop，用管理员权限执行 DISM，启用 虚拟机平台、
+适用于 Linux 的 Windows 子系统；并执行 wsl --install --no-distribution。
+

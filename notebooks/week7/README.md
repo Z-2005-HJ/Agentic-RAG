@@ -9,6 +9,8 @@ Week 7 adds TWO major enhancements to the arXiv Paper Curator:
 1. **🤖 Agentic RAG with LangGraph** - Intelligent, adaptive retrieval with decision-making
 2. **💬 Telegram Bot Integration** - Conversational interface for mobile/desktop access
 
+> **中文 · 总览：** Part 1 用 **LangGraph** 把「是否检索、文档是否相关、是否改写再问」做成显式分支；Part 2 在相同 RAG 栈外加 **Telegram** 会话入口（需 Bot Token 与可选白名单）。
+
 ---
 
 ## 🧠 Part 1: Agentic RAG with LangGraph
@@ -180,6 +182,8 @@ jupyter notebook notebooks/week7/week7_agentic_rag.ipynb
 ---
 
 ## 💬 Part 2: Telegram Bot Integration
+
+> **中文 · Bot：** 下列能力建立在 Week 5–6 的 **检索、生成、缓存、追踪** 之上；开发期多用 **Polling**，生产可改 **Webhook（HTTPS）**。
 
 ### What We Built
 
