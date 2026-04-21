@@ -1,5 +1,5 @@
 services:
-  # API service
+  # FastAPI 应用（对外 API）
   api:
     build: .
     container_name: rag-api
@@ -21,7 +21,7 @@ services:
     env_file:
       - .env
     environment:
-      # Container-specific overrides
+      # 仅作用于本服务，覆盖 .env 中同名变量
       - OPENSEARCH_HOST=http://opensearch:9200
       - OPENSEARCH__HOST=http://opensearch:9200
       - OLLAMA_HOST=http://ollama:11434
@@ -29,6 +29,7 @@ services:
       - LANGFUSE_HOST=http://langfuse-web:3000 
       - LANGFUSE_DEBUG=true
       - REDIS__HOST=redis
+      - TELEGRAM__ENABLED=false
     networks:
       - rag-network
 
@@ -52,12 +53,17 @@ services:
 
   opensearch:
     image: opensearchproject/opensearch:2.19.0
+    # 使用官方 OpenSearch 镜像
     container_name: rag-opensearch
     environment:
       - discovery.type=single-node
+      # 单节点集群（开发/本地常用）
       - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      # JVM 堆内存上下限
       - DISABLE_SECURITY_PLUGIN=true
+      # 关闭安全插件，HTTP 直连，无需账号密码（仅限可信网络）
       - bootstrap.memory_lock=true
+      # 将 JVM 堆锁定在物理内存，减少换页到磁盘
     ports:
       - "9200:9200"
       - "9600:9600"
@@ -67,6 +73,7 @@ services:
         hard: -1
     volumes:
       - opensearch_data:/usr/share/opensearch/data
+      # 数据卷持久化，删容器不丢索引数据
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
@@ -101,22 +108,29 @@ services:
       context: ./airflow
       dockerfile: Dockerfile
     container_name: rag-airflow
-    # user: "50000:0"  # Uncomment for WSL/Ubuntu, comment out for Mac
+    # user: "50000:0"  # WSL/Ubuntu 可取消注释；Mac 上请保持注释
     depends_on:
       postgres:
         condition: service_healthy
     env_file:
       - .env
     environment:
-      # Airflow-specific environment setup
+      # Airflow 专用环境
       - AIRFLOW_HOME=/opt/airflow
       - PYTHONPATH=/opt/airflow/src
-      # Container hostnames for Airflow
+      # 各服务在 Compose 网络内的主机名
       - POSTGRES_DATABASE_URL=postgresql+psycopg2://rag_user:rag_password@postgres:5432/rag_db
       - OPENSEARCH_HOST=http://opensearch:9200
       - OPENSEARCH__HOST=http://opensearch:9200
       - OLLAMA_HOST=http://ollama:11434
       - REDIS__HOST=redis
+      # Docling pulls models via huggingface_hub inside the container; without mirror / long timeout,
+      # CN or IPv6-broken Docker setups often hit ConnectError errno 97 (EAFNOSUPPORT) or LocalEntryNotFoundError.
+      - HF_ENDPOINT=${HF_ENDPOINT:-https://hf-mirror.com}
+      - HF_HUB_DOWNLOAD_TIMEOUT=${HF_HUB_DOWNLOAD_TIMEOUT:-600}
+      - HF_HUB_ETAG_TIMEOUT=${HF_HUB_ETAG_TIMEOUT:-120}
+      # Route Jina embedding requests through a host-side relay (keeps other outbound traffic direct).
+      - JINA_BASE_URL=${JINA_BASE_URL:-http://192.168.144.1:19090/v1}
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
@@ -124,7 +138,7 @@ services:
       - ./src:/opt/airflow/src
     ports:
       - "8080:8080"
-    # Command handled by entrypoint.sh
+    # 启动命令由 airflow 镜像内 entrypoint.sh 处理
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
@@ -173,7 +187,7 @@ services:
     networks:
       - rag-network
 
-  # ClickHouse for Langfuse analytics
+  # Langfuse 分析后端：ClickHouse
   clickhouse:
     image: clickhouse/clickhouse-server:24.8-alpine
     container_name: rag-clickhouse
@@ -212,7 +226,7 @@ services:
     environment:
       NEXTAUTH_URL: http://localhost:3001
       DATABASE_URL: postgresql://langfuse:langfuse@langfuse-postgres:5432/langfuse
-      # Security: Load sensitive values from .env file
+      # 敏感项从 .env 注入（勿提交真实密钥到仓库）
       SALT: ${LANGFUSE_SALT}
       ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY}
       TELEMETRY_ENABLED: "false"
@@ -261,7 +275,7 @@ services:
       - "3001:3000"
     environment:
       NEXTAUTH_URL: http://localhost:3001
-      # Security: Load sensitive values from .env file
+      # 敏感项从 .env 注入
       NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET}
       DATABASE_URL: postgresql://langfuse:langfuse@langfuse-postgres:5432/langfuse
       SALT: ${LANGFUSE_SALT}
@@ -382,4 +396,4 @@ volumes:
 
 networks:
   rag-network:
-    driver: bridge 
+    driver: bridge

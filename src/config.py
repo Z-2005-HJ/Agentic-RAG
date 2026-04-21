@@ -13,6 +13,7 @@ ENV_FILE_PATH = PROJECT_ROOT / ".env"
 class BaseConfigSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=[".env", str(ENV_FILE_PATH)],
+        env_file_encoding="utf-8-sig",  # UTF-8 + strip BOM; avoids mixed GBK/ANSI .env issues on Windows
         extra="ignore",
         frozen=True,
         env_nested_delimiter="__",
@@ -177,6 +178,7 @@ class Settings(BaseConfigSettings):
 
     # Jina AI embeddings configuration
     jina_api_key: str = ""
+    jina_base_url: str = "https://api.jina.ai/v1"
 
     arxiv: ArxivSettings = Field(default_factory=ArxivSettings)
     pdf_parser: PDFParserSettings = Field(default_factory=PDFParserSettings)

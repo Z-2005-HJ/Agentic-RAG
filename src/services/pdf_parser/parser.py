@@ -1,4 +1,5 @@
 # Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+import asyncio
 import logging
 from pathlib import Path
 from typing import Optional
@@ -31,7 +32,8 @@ class PDFParserService:
             raise PDFValidationError(f"PDF file not found: {pdf_path}")
 
         try:
-            result = await self.docling_parser.parse_pdf(pdf_path)
+            # DoclingParser.parse_pdf is synchronous; use to_thread so we do not block the event loop or misuse await.
+            result = await asyncio.to_thread(self.docling_parser.parse_pdf, pdf_path)
             if result:
                 logger.info(f"Parsed {pdf_path.name}")
                 return result

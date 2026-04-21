@@ -115,7 +115,6 @@ def get_agentic_rag_service(
         ollama_client=ollama,
         embeddings_client=embeddings,
         langfuse_tracer=langfuse,
-        model=settings.ollama_model,
     )
 
 

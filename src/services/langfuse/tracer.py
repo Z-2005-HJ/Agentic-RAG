@@ -15,42 +15,61 @@ class RAGTracer:
         self.tracer = tracer
 
     @contextmanager
+    def _safe_span(self, trace, name: str, input_data: Dict[str, Any]):
+        """Create a span if tracing API exists; otherwise no-op."""
+        span = None
+        try:
+            if hasattr(self.tracer, "create_span"):
+                span = self.tracer.create_span(trace=trace, name=name, input_data=input_data)
+        except Exception:
+            span = None
+
+        try:
+            yield span
+        finally:
+            if span and hasattr(span, "end"):
+                try:
+                    span.end()
+                except Exception:
+                    pass
+
+    @contextmanager
     def trace_request(self, user_id: str, query: str):
         """Main request trace context manager."""
         trace = None
         try:
-            with self.tracer.trace_rag_request(
-                query=query, user_id=user_id, session_id=f"session_{user_id}", metadata={"simplified_tracing": True}
-            ) as trace:
-                yield trace
+            if hasattr(self.tracer, "trace_rag_request"):
+                with self.tracer.trace_rag_request(
+                    query=query, user_id=user_id, session_id=f"session_{user_id}", metadata={"simplified_tracing": True}
+                ) as trace:
+                    yield trace
+            else:
+                # Langfuse v3 client wrapper in this repo has no trace_rag_request.
+                # Degrade gracefully so tracing cannot break /ask or /stream.
+                yield None
         finally:
-            if trace:
+            if trace and hasattr(self.tracer, "flush"):
                 self.tracer.flush()
 
     @contextmanager
     def trace_embedding(self, trace, query: str):
         """Query embedding operation with timing."""
         start_time = time.time()
-        span = self.tracer.create_span(
-            trace=trace, name="query_embedding", input_data={"query": query, "query_length": len(query)}
-        )
-        try:
-            yield span
-        finally:
-            duration = time.time() - start_time
-            if span:
-                self.tracer.update_span(span=span, output={"embedding_duration_ms": round(duration * 1000, 2), "success": True})
-                span.end()
+        with self._safe_span(trace, "query_embedding", {"query": query, "query_length": len(query)}) as span:
+            try:
+                yield span
+            finally:
+                duration = time.time() - start_time
+                if span:
+                    self.tracer.update_span(
+                        span=span, output={"embedding_duration_ms": round(duration * 1000, 2), "success": True}
+                    )
 
     @contextmanager
     def trace_search(self, trace, query: str, top_k: int):
         """Search operation with timing."""
-        span = self.tracer.create_span(trace=trace, name="search_retrieval", input_data={"query": query, "top_k": top_k})
-        try:
+        with self._safe_span(trace, "search_retrieval", {"query": query, "top_k": top_k}) as span:
             yield span
-        finally:
-            if span:
-                span.end()
 
     def end_search(self, span, chunks: List[Dict], arxiv_ids: List[str], total_hits: int):
         """End search span with essential results."""
@@ -70,12 +89,8 @@ class RAGTracer:
     @contextmanager
     def trace_prompt_construction(self, trace, chunks: List[Dict]):
         """Prompt building with timing."""
-        span = self.tracer.create_span(trace=trace, name="prompt_construction", input_data={"chunk_count": len(chunks)})
-        try:
+        with self._safe_span(trace, "prompt_construction", {"chunk_count": len(chunks)}) as span:
             yield span
-        finally:
-            if span:
-                span.end()
 
     def end_prompt(self, span, prompt: str):
         """End prompt span with final prompt."""
@@ -94,14 +109,8 @@ class RAGTracer:
     @contextmanager
     def trace_generation(self, trace, model: str, prompt: str):
         """LLM generation with timing."""
-        span = self.tracer.create_span(
-            trace=trace, name="llm_generation", input_data={"model": model, "prompt_length": len(prompt), "prompt": prompt}
-        )
-        try:
+        with self._safe_span(trace, "llm_generation", {"model": model, "prompt_length": len(prompt), "prompt": prompt}) as span:
             yield span
-        finally:
-            if span:
-                span.end()
 
     def end_generation(self, span, response: str, model: str):
         """End generation span with response."""
