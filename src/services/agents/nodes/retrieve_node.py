@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 import logging
 import time
 from typing import Dict, Union
@@ -12,37 +11,34 @@ from .utils import get_latest_query
 
 logger = logging.getLogger(__name__)
 
-
+#这个函数负责触发论文检索：先检查是否超过最大重试次数，
+#没超就生成工具调用去查论文，超了就直接返回失败提示。
 async def ainvoke_retrieve_step(
     state: AgentState,
     runtime: Runtime[Context],
 ) -> Dict[str, Union[int, str, list]]:
-    """Initiate retrieval or return fallback if max attempts reached.
-
-    This node creates a tool call to retrieve documents, or returns a fallback
-    message if the maximum number of retrieval attempts has been reached.
-
-    :param state: Current agent state
-    :param runtime: Runtime context containing max_retrieval_attempts
-    :returns: Dictionary with updated state (retrieval_attempts, messages, original_query)
     """
-    logger.info("NODE: retrieve")
+    启动检索流程，若达到最大重试次数则返回兜底信息
+    该节点创建检索论文的工具调用，若已达到最大重试次数，则直接返回提示消息
+    """
+    logger.info("执行节点：检索文档")
     start_time = time.time()
 
+    # 获取消息、用户问题、当前已重试次数
     messages = state["messages"]
     question = get_latest_query(messages)
     current_attempts = state.get("retrieval_attempts", 0)
 
-    # Get max attempts from context
+    # 从上下文获取最大重试次数
     max_attempts = runtime.context.max_retrieval_attempts
 
-    # Store original query if not set
+    # 存储原始问题（仅第一次）
     updates = {}
     if state.get("original_query") is None:
         updates["original_query"] = question
-        logger.debug(f"Stored original query: {question[:100]}...")
+        logger.debug(f"已存储原始问题: {question[:100]}...")
 
-    # Create span for retrieval initiation
+    # 创建检索监控追踪
     span = None
     if runtime.context.langfuse_enabled and runtime.context.trace:
         try:
@@ -59,22 +55,22 @@ async def ainvoke_retrieve_step(
                     "top_k": runtime.context.top_k,
                 },
             )
-            logger.debug(f"Created Langfuse span for retrieval attempt {current_attempts + 1}")
+            logger.debug(f"已创建第 {current_attempts + 1} 次检索监控追踪")
         except Exception as e:
-            logger.warning(f"Failed to create span for retrieve node: {e}")
+            logger.warning(f"创建检索节点追踪失败: {e}")
 
-    # Check if max attempts reached
+    # 判断是否达到最大重试次数
     if current_attempts >= max_attempts:
-        logger.warning(f"Max retrieval attempts ({max_attempts}) reached")
+        logger.warning(f"已达到最大检索次数 ({max_attempts})")
         fallback_msg = (
-            f"I apologize, but I couldn't find relevant research papers after {max_attempts} attempts.\n"
-            "This may be because:\n"
-            "1. No papers in the database contain relevant information\n"
-            "2. The query terms don't match the indexed content\n\n"
-            "Please try rephrasing your question with more specific technical terms."
+            f"抱歉，经过 {max_attempts} 次尝试后仍未找到相关的学术论文。\n"
+            "可能原因：\n"
+            "1. 数据库中没有相关内容\n"
+            "2. 查询词与索引内容不匹配\n\n"
+            "请尝试使用更专业的术语重新提问。"
         )
 
-        # Update span with max attempts reached
+        # 更新追踪信息
         if span:
             execution_time = (time.time() - start_time) * 1000
             runtime.context.langfuse_tracer.end_span(
@@ -85,12 +81,12 @@ async def ainvoke_retrieve_step(
 
         return {**updates, "messages": [AIMessage(content=fallback_msg)]}
 
-    # Increment retrieval attempts
+    # 检索次数 +1
     new_attempt_count = current_attempts + 1
     updates["retrieval_attempts"] = new_attempt_count
-    logger.info(f"Retrieval attempt {new_attempt_count}/{max_attempts}")
+    logger.info(f"第 {new_attempt_count}/{max_attempts} 次检索")
 
-    # Create tool call for retrieval
+    # 创建检索论文的工具调用
     updates["messages"] = [
         AIMessage(
             content="",
@@ -104,9 +100,9 @@ async def ainvoke_retrieve_step(
         )
     ]
 
-    logger.debug(f"Created tool call for query: {question[:100]}...")
+    logger.debug(f"已创建工具调用，查询问题: {question[:100]}...")
 
-    # Update span with successful tool call creation
+    # 更新追踪信息
     if span:
         execution_time = (time.time() - start_time) * 1000
         runtime.context.langfuse_tracer.end_span(

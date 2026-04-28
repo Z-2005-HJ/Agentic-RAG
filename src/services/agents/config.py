@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 from typing import Any, Dict
 
 from pydantic import BaseModel, Field
@@ -7,20 +6,19 @@ from src.config import Settings, get_settings
 
 
 class GraphConfig(BaseModel):
-    """Configuration for the entire graph execution.
+    """
+    整个执行图的配置类
+    由智能体 RAG 服务使用，用于控制执行图行为、检索配置和运行参数
 
-    This is the configuration used by AgenticRAGService for controlling
-    graph behavior, retrieval settings, and execution parameters.
-
-    :param max_retrieval_attempts: Maximum number of retrieval attempts before fallback
-    :param guardrail_threshold: Threshold score for guardrail validation (0-100)
-    :param model: Default model to use for LLM calls (e.g., "llama3.2:1b")
-    :param temperature: Temperature for LLM generation (0.0 = deterministic)
-    :param top_k: Number of documents to retrieve from search
-    :param use_hybrid: Whether to use hybrid search (BM25 + vector)
-    :param enable_tracing: Whether to enable Langfuse tracing
-    :param metadata: Additional runtime metadata for tracking and analytics
-    :param settings: Application settings instance for environment and service config
+    max_retrieval_attempts: 触发降级前的最大重试检索次数
+    guardrail_threshold: 内容安全校验阈值（0-100）
+    model: LLM 调用使用的默认模型（例如 "llama3.2:1b"）
+    temperature: 大模型生成温度（0.0 = 确定性输出）
+    top_k: 从搜索引擎中获取的文档数量
+    use_hybrid: 是否使用混合检索（关键词 + 向量）
+    enable_tracing: 是否启用 Langfuse 链路追踪
+    metadata: 用于跟踪和分析的额外运行时元数据
+    settings: 应用配置实例，用于环境与服务配置
     """
 
     max_retrieval_attempts: int = 2

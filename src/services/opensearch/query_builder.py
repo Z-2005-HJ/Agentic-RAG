@@ -1,4 +1,16 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+QueryBuilder这个类就是你给他：搜索词、分页、分类、是否最新、是否搜片段，
+它就给你拼成一个能直接发给Opensearch的完整查询
+init：如果你要搜片段，则优先去正文搜，要是你要搜论文，则优先搜标题
+总入口build()包含所有查询组件，
+1._build_query()
+  _build_text_query()文本搜索：生成文本匹配条件，决定哪些文档和用户的搜索词相关。
+  _build_filters()分类过滤：生成过滤条件，筛选出符合要求的文档
+2._build_source_fields()控制返回字段：看你要搜chunk还是搜论文
+3._build_highlight()关键词highlight
+4._build_sort()结果排序：如果输入了搜索词，不按时间排序按相关性排序，如果没输入，按时间排序
+'''
+
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -6,34 +18,22 @@ logger = logging.getLogger(__name__)
 
 
 class QueryBuilder:
-    """
-    Unified query builder for OpenSearch supporting both paper-level and chunk-level search.
-
-    Builds complex OpenSearch queries with proper scoring, filtering, and highlighting.
-    """
 
     def __init__(
         self,
         query: str,
         size: int = 10,
         from_: int = 0,
+        #分页偏移量，代表着从第几条开始返回，from是关键字，所以加一个_
         fields: Optional[List[str]] = None,
+        #自定义搜索那些字段
         categories: Optional[List[str]] = None,
         track_total_hits: bool = True,
+        #精准命中总数统计
         latest_papers: bool = False,
         search_chunks: bool = False,
     ):
-        """Initialize query builder.
 
-        :param query: Search query text
-        :param size: Number of results to return
-        :param from_: Offset for pagination
-        :param fields: Fields to search in (if None, auto-determined based on search_chunks)
-        :param categories: Filter by categories
-        :param track_total_hits: Whether to track total hits accurately
-        :param latest_papers: Sort by publication date instead of relevance
-        :param search_chunks: Whether searching chunks (True) or papers (False)
-        """
         self.query = query
         self.size = size
         self.from_ = from_
@@ -45,16 +45,14 @@ class QueryBuilder:
         if fields is None:
             if search_chunks:
                 self.fields = ["chunk_text^3", "title^2", "abstract^1"]
+            #^表示权重，也就是说如果用户输入了chunk，那就按照chunk来搜索
             else:
                 self.fields = ["title^3", "abstract^2", "authors^1"]
         else:
             self.fields = fields
 
     def build(self) -> Dict[str, Any]:
-        """Build the complete OpenSearch query.
-
-        :returns: Complete query dictionary ready for OpenSearch
-        """
+    #把后面零散的配置，打包成一个标准的查询请求
         query_body = {
             "query": self._build_query(),
             "size": self.size,
@@ -71,17 +69,15 @@ class QueryBuilder:
         return query_body
 
     def _build_query(self) -> Dict[str, Any]:
-        """Build the main query with filters.
 
-        :returns: Query dictionary with bool structure
-        """
         must_clauses = []
-
+        #初始化列表，用来放必须满足的匹配条件
         if self.query.strip():
             must_clauses.append(self._build_text_query())
+        #把用户的搜索词放到列表里
 
         filter_clauses = self._build_filters()
-
+        #根据用户传入的categories参数，生成过滤条件
         bool_query = {}
 
         if must_clauses:
@@ -95,10 +91,7 @@ class QueryBuilder:
         return {"bool": bool_query}
 
     def _build_text_query(self) -> Dict[str, Any]:
-        """Build the main text search query.
 
-        :returns: Multi-match query for text search
-        """
         return {
             "multi_match": {
                 "query": self.query,
@@ -111,10 +104,7 @@ class QueryBuilder:
         }
 
     def _build_filters(self) -> List[Dict[str, Any]]:
-        """Build filter clauses for the query.
-
-        :returns: List of filter clauses
-        """
+        #如果输入了categories就创建一个filter
         filters = []
 
         if self.categories:
@@ -123,20 +113,15 @@ class QueryBuilder:
         return filters
 
     def _build_source_fields(self) -> Any:
-        """Define which fields to return in results.
-
-        :returns: Source field configuration (list for papers, dict for chunks)
-        """
+    #控制 OpenSearch 查询后，只返回哪些字段给前端，不返回哪些字段。
         if self.search_chunks:
             return {"excludes": ["embedding"]}
         else:
             return ["arxiv_id", "title", "authors", "abstract", "categories", "published_date", "pdf_url"]
 
-    def _build_highlight(self) -> Dict[str, Any]:
-        """Build highlighting configuration.
 
-        :returns: Highlight configuration dictionary
-        """
+    def _build_highlight(self) -> Dict[str, Any]:
+    #给搜索到的关键词加上highlight
         if self.search_chunks:
             return {
                 "fields": {
@@ -157,7 +142,6 @@ class QueryBuilder:
                 "require_field_match": False,
             }
         else:
-            # Paper-specific highlighting
             return {
                 "fields": {
                     "title": {
@@ -181,10 +165,8 @@ class QueryBuilder:
             }
 
     def _build_sort(self) -> Optional[List[Dict[str, Any]]]:
-        """Build sorting configuration.
-
-        :returns: Sort configuration or None for relevance scoring
-        """
+    #如果用户要最新的论文，就按发布时间排序。
+    #如果用户输入了搜索词，就不排序，让它自动排序即可
         if self.latest_papers:
             return [{"published_date": {"order": "desc"}}, "_score"]
 

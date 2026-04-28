@@ -1,12 +1,14 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+API数据格式标准
+定义前端传什么、定义后端返回什么、自动生成接口文档+自动校验数据
+'''
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-
+#用户提问的请求体
+#定义用户提问时，前端必须传给后端的数据格式
 class AskRequest(BaseModel):
-    """Request model for RAG question answering."""
-
     query: str = Field(..., description="User's question", min_length=1, max_length=1000)
     top_k: int = Field(3, description="Number of top chunks to retrieve", ge=1, le=10)
     use_hybrid: bool = Field(True, description="Use hybrid search (BM25 + vector)")
@@ -24,10 +26,9 @@ class AskRequest(BaseModel):
             }
         }
 
-
+#普通问答返回体
+#定义后端返回给前端的标准格式
 class AskResponse(BaseModel):
-    """Response model for RAG question answering."""
-
     query: str = Field(..., description="Original user question")
     answer: str = Field(..., description="Generated answer from LLM")
     sources: List[str] = Field(..., description="PDF URLs of source papers")
@@ -45,10 +46,9 @@ class AskResponse(BaseModel):
             }
         }
 
-
+#智能体问答返回体
+#继承AskResponse，比普通问答多了agent的内容
 class AgenticAskResponse(AskResponse):
-    """Response model for agentic RAG question answering."""
-
     reasoning_steps: List[str] = Field(..., description="Agent's decision-making steps")
     retrieval_attempts: int = Field(..., description="Number of document retrieval attempts")
     trace_id: Optional[str] = Field(None, description="Langfuse trace ID for feedback and debugging")
@@ -71,10 +71,9 @@ class AgenticAskResponse(AskResponse):
             }
         }
 
-
+#用户反馈请求
+#用户对答案进行反馈打分
 class FeedbackRequest(BaseModel):
-    """Request model for user feedback on RAG answers."""
-
     trace_id: str = Field(..., description="Langfuse trace ID from the response")
     score: float = Field(..., description="Feedback score (0-1 or -1 to 1)", ge=-1, le=1)
     comment: Optional[str] = Field(None, description="Optional feedback comment", max_length=1000)
@@ -89,9 +88,9 @@ class FeedbackRequest(BaseModel):
         }
 
 
+#反馈结果返回
+#返回是否记录反馈
 class FeedbackResponse(BaseModel):
-    """Response model for feedback submission."""
-
     success: bool = Field(..., description="Whether feedback was recorded successfully")
     message: str = Field(..., description="Status message")
 

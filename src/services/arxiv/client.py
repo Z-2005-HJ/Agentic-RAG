@@ -1,4 +1,15 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+arXiv论文获取客户端核心功能
+顺序：
+发送请求：fetch_papers、fetch_papers_with_query、fetch_paper_by_id
+解析XML：_parse_response
+解析单篇论文：_parse_single_entry
+拿单篇论文ID：_get_arxiv_id，标题、摘要、发布日期：_get_text，作者：_get_authors，
+    分类：_get_categories，拿PDF下载链接：_get_pdf_url
+所有信息封装成arxivPaper
+拿到下载URL就能下载PDF：download_pdf，下载重试机制：_download_with_retry，生成保存路径：_get_pdf_path
+'''
+
 import asyncio
 import logging
 import time
@@ -17,17 +28,19 @@ logger = logging.getLogger(__name__)
 
 
 class ArxivClient:
-    """Client for fetching papers from arXiv API."""
+#专门用来对接arxivAPI的客户端类
 
     def __init__(self, settings: ArxivSettings):
         self._settings = settings
         self._last_request_time: Optional[float] = None
 
     @cached_property
+    #@cached_property装饰器，把下面的方法变成只读属性，只计算一次，结果会被缓存起来
     def pdf_cache_dir(self) -> Path:
-        """PDF cache directory."""
+    #定义一个函数，返回值是path类型
         cache_dir = Path(self._settings.pdf_cache_dir)
         cache_dir.mkdir(parents=True, exist_ok=True)
+        #递归创建目录，如果上一层的目录不存在，就会一起创建
         return cache_dir
 
     @property
@@ -63,34 +76,23 @@ class ArxivClient:
         from_date: Optional[str] = None,
         to_date: Optional[str] = None,
     ) -> List[ArxivPaper]:
-        """
-        Fetch papers from arXiv for the configured category.
+    #from_date表示只获取这个日期之后提交的，to_date表示只获取这个日期之前提交的
 
-        Args:
-            max_results: Maximum number of papers to fetch (uses settings default if None)
-            start: Starting index for pagination
-            sort_by: Sort criteria (submittedDate, lastUpdatedDate, relevance)
-            sort_order: Sort order (ascending, descending)
-            from_date: Filter papers submitted after this date (format: YYYYMMDD)
-            to_date: Filter papers submitted before this date (format: YYYYMMDD)
-
-        Returns:
-            List of ArxivPaper objects for the configured category
-        """
         if max_results is None:
             max_results = self.max_results
 
-        # Build search query
+        #给用户提取的要查询的论文进行归类
         search_query = f"cat:{self.search_category}"
 
-        # Add date filtering if provided
+        #如果设置了截止日期
         if from_date or to_date:
-            # Convert dates to arXiv format (YYYYMMDDHHMM) - use 0000 for start of day, 2359 for end
             date_from = f"{from_date}0000" if from_date else "*"
             date_to = f"{to_date}2359" if to_date else "*"
             # Use correct arXiv API syntax with + symbols
             search_query += f" AND submittedDate:[{date_from}+TO+{date_to}]"
+            #搜寻信息加上开始和截止时间
 
+        #这一步是拼接API需求参数
         params = {
             "search_query": search_query,
             "start": start,
@@ -99,13 +101,14 @@ class ArxivClient:
             "sortOrder": sort_order,
         }
 
-        safe = ":+[]"  # Don't encode :, +, [, ] characters needed for arXiv queries
+        safe = ":+[]"
         url = f"{self.base_url}?{urlencode(params, quote_via=quote, safe=safe)}"
+        #会把特殊字符转化为URL编码格式
 
+        #这里是先拼好了URL，然后发送请求，从arxiv拿到XML数据
         try:
             logger.info(f"Fetching {max_results} {self.search_category} papers from arXiv")
 
-            # Add rate limiting delay between all requests (arXiv recommends 3 seconds)
             if self._last_request_time is not None:
                 time_since_last = time.time() - self._last_request_time
                 if time_since_last < self.rate_limit_delay:
@@ -113,11 +116,15 @@ class ArxivClient:
                     await asyncio.sleep(sleep_time)
 
             self._last_request_time = time.time()
+            #设置休眠时间，发送请求太频繁会被封禁或限流
 
             async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
                 response = await client.get(url)
                 response.raise_for_status()
                 xml_data = response.text
+            #httpx.AsyncClient异步HTTP客户端，用来发送非阻塞的网络请求
+            #response.raise_for_status()如果返回错误码，会抛出异常
+
 
             papers = self._parse_response(xml_data)
             logger.info(f"Fetched {len(papers)} papers")
@@ -134,37 +141,18 @@ class ArxivClient:
             logger.error(f"Failed to fetch papers from arXiv: {e}")
             raise ArxivAPIException(f"Unexpected error fetching papers from arXiv: {e}")
 
+
+    #这个函数是高级搜索，搜作者、标题、分类、日期、关键词等都可以
     async def fetch_papers_with_query(
         self,
         search_query: str,
+        #这里决定了用户输入什么就上传什么
         max_results: Optional[int] = None,
         start: int = 0,
         sort_by: str = "submittedDate",
         sort_order: str = "descending",
     ) -> List[ArxivPaper]:
-        """
-        Fetch papers from arXiv using a custom search query.
 
-        Args:
-            search_query: Custom arXiv search query (e.g., "cat:cs.AI AND submittedDate:[20240101 TO 20241231]")
-            max_results: Maximum number of papers to fetch (uses settings default if None)
-            start: Starting index for pagination
-            sort_by: Sort criteria (submittedDate, lastUpdatedDate, relevance)
-            sort_order: Sort order (ascending, descending)
-
-        Returns:
-            List of ArxivPaper objects matching the search query
-
-        Examples:
-            # Papers from last 30 days
-            "cat:cs.AI AND submittedDate:[20240101 TO *]"
-
-            # Papers by specific author
-            "au:LeCun AND cat:cs.AI"
-
-            # Papers with specific keywords in title
-            "ti:transformer AND cat:cs.AI"
-        """
         if max_results is None:
             max_results = self.max_results
 
@@ -176,11 +164,10 @@ class ArxivClient:
             "sortOrder": sort_order,
         }
 
-        safe = ":+[]*"  # Don't encode :, +, [, ], *, characters needed for arXiv queries
+        safe = ":+[]*"
         url = f"{self.base_url}?{urlencode(params, quote_via=quote, safe=safe)}"
 
         try:
-            # Add rate limiting delay between all requests (arXiv recommends 3 seconds)
             if self._last_request_time is not None:
                 time_since_last = time.time() - self._last_request_time
                 if time_since_last < self.rate_limit_delay:
@@ -209,21 +196,13 @@ class ArxivClient:
             logger.error(f"Failed to fetch papers from arXiv: {e}")
             raise ArxivAPIException(f"Unexpected error fetching papers from arXiv: {e}")
 
+
     async def fetch_paper_by_id(self, arxiv_id: str) -> Optional[ArxivPaper]:
-        """
-        Fetch a specific paper by its arXiv ID.
 
-        Args:
-            arxiv_id: arXiv paper ID (e.g., "2507.17748v1" or "2507.17748")
-
-        Returns:
-            ArxivPaper object or None if not found
-        """
-        # Clean the arXiv ID (remove version if needed for search)
         clean_id = arxiv_id.split("v")[0] if "v" in arxiv_id else arxiv_id
         params = {"id_list": clean_id, "max_results": 1}
 
-        safe = ":+[]*"  # Don't encode :, +, [, ], *, characters needed for arXiv queries
+        safe = ":+[]*"
         url = f"{self.base_url}?{urlencode(params, quote_via=quote, safe=safe)}"
 
         try:
@@ -251,25 +230,18 @@ class ArxivClient:
             raise ArxivAPIException(f"Unexpected error fetching paper {arxiv_id} from arXiv: {e}")
 
     def _parse_response(self, xml_data: str) -> List[ArxivPaper]:
-        """
-        Parse arXiv API XML response into ArxivPaper objects.
-
-        Args:
-            xml_data: Raw XML response from arXiv API
-
-        Returns:
-            List of parsed ArxivPaper objects
-        """
         try:
             root = ET.fromstring(xml_data)
+            #把str格式的XML变成python能读的树形结构，把一整段文字变成结构化数据
             entries = root.findall("atom:entry", self.namespaces)
+            #arxiv返回的XML，每一篇论文都包在entry里面
 
             papers = []
             for entry in entries:
                 paper = self._parse_single_entry(entry)
                 if paper:
                     papers.append(paper)
-
+            #一篇一篇把论文抽出来
             return papers
 
         except ET.ParseError as e:
@@ -280,17 +252,7 @@ class ArxivClient:
             raise ArxivParseError(f"Unexpected error parsing arXiv response: {e}")
 
     def _parse_single_entry(self, entry: ET.Element) -> Optional[ArxivPaper]:
-        """
-        Parse a single entry from arXiv XML response.
-
-        Args:
-            entry: XML entry element
-
-        Returns:
-            ArxivPaper object or None if parsing fails
-        """
         try:
-            # Extract basic metadata
             arxiv_id = self._get_arxiv_id(entry)
             if not arxiv_id:
                 return None
@@ -317,17 +279,6 @@ class ArxivClient:
             return None
 
     def _get_text(self, element: ET.Element, path: str, clean_newlines: bool = False) -> str:
-        """
-        Extract text from XML element safely.
-
-        Args:
-            element: Parent XML element
-            path: XPath to find the text element
-            clean_newlines: Whether to replace newlines with spaces
-
-        Returns:
-            Extracted text or empty string
-        """
         elem = element.find(path, self.namespaces)
         if elem is None or elem.text is None:
             return ""
@@ -336,30 +287,12 @@ class ArxivClient:
         return text.replace("\n", " ") if clean_newlines else text
 
     def _get_arxiv_id(self, entry: ET.Element) -> Optional[str]:
-        """
-        Extract arXiv ID from entry.
-
-        Args:
-            entry: XML entry element
-
-        Returns:
-            arXiv ID or None
-        """
         id_elem = entry.find("atom:id", self.namespaces)
         if id_elem is None or id_elem.text is None:
             return None
         return id_elem.text.split("/")[-1]
 
     def _get_authors(self, entry: ET.Element) -> List[str]:
-        """
-        Extract author names from entry.
-
-        Args:
-            entry: XML entry element
-
-        Returns:
-            List of author names
-        """
         authors = []
         for author in entry.findall("atom:author", self.namespaces):
             name = self._get_text(author, "atom:name")
@@ -368,15 +301,6 @@ class ArxivClient:
         return authors
 
     def _get_categories(self, entry: ET.Element) -> List[str]:
-        """
-        Extract categories from entry.
-
-        Args:
-            entry: XML entry element
-
-        Returns:
-            List of category terms
-        """
         categories = []
         for category in entry.findall("atom:category", self.namespaces):
             term = category.get("term")
@@ -385,73 +309,42 @@ class ArxivClient:
         return categories
 
     def _get_pdf_url(self, entry: ET.Element) -> str:
-        """
-        Extract PDF URL from entry links.
-
-        Args:
-            entry: XML entry element
-
-        Returns:
-            PDF URL or empty string (always HTTPS)
-        """
         for link in entry.findall("atom:link", self.namespaces):
             if link.get("type") == "application/pdf":
                 url = link.get("href", "")
-                # Convert HTTP to HTTPS for arXiv URLs
                 if url.startswith("http://arxiv.org/"):
                     url = url.replace("http://arxiv.org/", "https://arxiv.org/")
                 return url
         return ""
 
     async def download_pdf(self, paper: ArxivPaper, force_download: bool = False) -> Optional[Path]:
-        """
-        Download PDF for a given paper to local cache.
-
-        Args:
-            paper: ArxivPaper object containing PDF URL
-            force_download: Force re-download even if file exists
-
-        Returns:
-            Path to downloaded PDF file or None if download failed
-        """
         if not paper.pdf_url:
             logger.error(f"No PDF URL for paper {paper.arxiv_id}")
             return None
 
         pdf_path = self._get_pdf_path(paper.arxiv_id)
+        #下载到指定的路径
 
-        # Return cached PDF if exists
         if pdf_path.exists() and not force_download:
             logger.info(f"Using cached PDF: {pdf_path.name}")
             return pdf_path
 
-        # Download with retry
         if await self._download_with_retry(paper.pdf_url, pdf_path):
             return pdf_path
         else:
             return None
 
     def _get_pdf_path(self, arxiv_id: str) -> Path:
-        """
-        Get the local path for a PDF file.
 
-        Args:
-            arxiv_id: arXiv paper ID
-
-        Returns:
-            Path object for the PDF file
-        """
         safe_filename = arxiv_id.replace("/", "_") + ".pdf"
         return self.pdf_cache_dir / safe_filename
 
     async def _download_with_retry(self, url: str, path: Path, max_retries: Optional[int] = None) -> bool:
-        """Download a file with retry logic."""
         if max_retries is None:
             max_retries = self._settings.download_max_retries
 
         logger.info(f"Downloading PDF from {url}")
 
-        # Respect rate limits
         await asyncio.sleep(self.rate_limit_delay)
 
         for attempt in range(max_retries):
@@ -487,8 +380,7 @@ class ArxivClient:
                 logger.error(f"Unexpected download error: {e}")
                 raise PDFDownloadException(f"Unexpected error during PDF download: {e}")
 
-        # Clean up partial download
         if path.exists():
             path.unlink()
-
+        #清楚多余的缓存
         return False

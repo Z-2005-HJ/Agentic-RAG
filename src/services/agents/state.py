@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 from typing import Annotated, Any, Dict, List, Optional, TypedDict
 
 from langchain_core.messages import AnyMessage
@@ -6,57 +5,24 @@ from langgraph.graph.message import add_messages
 
 from .models import GradingResult, GuardrailScoring, RoutingDecision, SourceItem, ToolArtefact
 
-
+#只能RAG系统的记忆/状态记录本，数据、中间结果、思考过程都存在这里
 class AgentState(TypedDict):
-    """State class for the Agentic RAG workflow.
+    """
+    智能体 RAG 工作流的状态类
+    基于 TypedDict，遵循 LangGraph 2025 最佳实践
+    用于跟踪所有需要在节点之间传递的数据
 
-    TypedDict-based state following LangGraph 2025 best practices.
-    Tracks all data that needs to be passed between nodes.
-
-    :cvar messages:
-        List of messages in the conversation. Uses add_messages reducer
-        to append new messages rather than overwrite.
-    :type messages: Annotated[list[AnyMessage], add_messages]
-
-    :cvar original_query:
-        The original user query before any rewrites.
-    :type original_query: Optional[str]
-
-    :cvar rewritten_query:
-        The rewritten query after optimization for better retrieval.
-    :type rewritten_query: Optional[str]
-
-    :cvar retrieval_attempts:
-        Number of retrieval attempts made (for max attempt tracking).
-    :type retrieval_attempts: int
-
-    :cvar guardrail_result:
-        Result from guardrail validation with score and reasoning.
-    :type guardrail_result: Optional[GuardrailScoring]
-
-    :cvar routing_decision:
-        The routing decision determining the next node in the graph.
-    :type routing_decision: Optional[RoutingDecision]
-
-    :cvar sources:
-        Dictionary mapping tool_call_id to their output sources.
-    :type sources: Optional[Dict[str, Any]]
-
-    :cvar relevant_sources:
-        List of relevant sources to display to the user.
-    :type relevant_sources: List[SourceItem]
-
-    :cvar relevant_tool_artefacts:
-        List of tool artifacts with metadata from tool executions.
-    :type relevant_tool_artefacts: Optional[List[ToolArtefact]]
-
-    :cvar grading_results:
-        List of grading results for each retrieved document.
-    :type grading_results: List[GradingResult]
-
-    :cvar metadata:
-        Runtime metadata for tracing and analytics.
-    :type metadata: Dict[str, Any]
+    messages: 对话中的消息列表，使用 add_messages 追加消息
+    original_query: 未经任何重写的原始用户问题
+    rewritten_query: 优化后的重写问题，用于提升检索效果
+    retrieval_attempts: 已执行的检索次数（用于最大次数限制）
+    guardrail_result: 安全校验结果，包含分数与原因
+    routing_decision: 路线决策，决定执行图的下一个节点
+    sources: 工具调用输出来源的映射字典
+    relevant_sources: 需要展示给用户的相关来源列表
+    relevant_tool_artefacts: 工具执行结果与元数据列表
+    grading_results: 每篇检索文档的评分结果
+    metadata: 用于追踪与分析的运行时元数据
     """
 
     messages: Annotated[list[AnyMessage], add_messages]

@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 import logging
 from typing import Dict, List, Optional
 
@@ -8,32 +7,19 @@ from ..models import ReasoningStep, SourceItem, ToolArtefact
 
 logger = logging.getLogger(__name__)
 
-
+#从工具返回的消息里，提取论文来源（参考文献）
 def extract_sources_from_tool_messages(messages: List) -> List[SourceItem]:
-    """Extract sources from tool messages in conversation.
-
-    :param messages: List of messages from graph state
-    :returns: List of SourceItem objects
-    """
     sources = []
 
     for msg in messages:
         if isinstance(msg, ToolMessage) and hasattr(msg, "name"):
             if msg.name == "retrieve_papers":
-                # Parse tool response for sources
-                # This would need to parse the actual document metadata
-                # For now, return empty list
                 pass
 
     return sources
 
-
+#从消息里提取所有工具调用的结果
 def extract_tool_artefacts(messages: List) -> List[ToolArtefact]:
-    """Extract tool artifacts from messages.
-
-    :param messages: List of messages from graph state
-    :returns: List of ToolArtefact objects
-    """
     artefacts = []
 
     for msg in messages:
@@ -48,57 +34,32 @@ def extract_tool_artefacts(messages: List) -> List[ToolArtefact]:
 
     return artefacts
 
-
+#创建一条 “AI 思考步骤记录”
 def create_reasoning_step(
     step_name: str,
     description: str,
     metadata: Optional[Dict] = None,
 ) -> ReasoningStep:
-    """Create a reasoning step record.
-
-    :param step_name: Name of the step/node
-    :param description: Human-readable description
-    :param metadata: Additional metadata
-    :returns: ReasoningStep object
-    """
     return ReasoningStep(
         step_name=step_name,
         description=description,
         metadata=metadata or {},
     )
 
-
+#过滤消息，只保留用户消息和 AI 消息
 def filter_messages(messages: List) -> List[AIMessage | HumanMessage]:
-    """Filter messages to include only HumanMessage and AIMessage types.
-
-    Excludes tool messages and other internal message types.
-
-    :param messages: List of messages to filter
-    :returns: Filtered list of messages
-    """
     return [msg for msg in messages if isinstance(msg, (HumanMessage, AIMessage))]
 
-
+#从消息里拿到最新的用户问题
 def get_latest_query(messages: List) -> str:
-    """Get the latest user query from messages.
-
-    :param messages: List of messages
-    :returns: Latest query text
-    :raises ValueError: If no user query found
-    """
     for msg in reversed(messages):
         if isinstance(msg, HumanMessage):
             return msg.content
 
     raise ValueError("No user query found in messages")
 
-
+#获取最新的工具返回内容（论文片段）
 def get_latest_context(messages: List) -> str:
-    """Get the latest context from tool messages.
-
-    :param messages: List of messages
-    :returns: Latest context text or empty string
-    """
     for msg in reversed(messages):
         if isinstance(msg, ToolMessage):
             return msg.content if hasattr(msg, "content") else ""

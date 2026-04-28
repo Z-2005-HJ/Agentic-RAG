@@ -1,4 +1,7 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+RAGPromptBuilder：把系统提示、检索到的论文片段、用户问题拼成完整提示词
+ResponseParser：把模型返回的 JSON / 半 JSON / 纯文本答案安全解析成标准格式，保证程序不崩溃
+'''
 import json
 import re
 from pathlib import Path
@@ -7,24 +10,20 @@ from typing import Any, Dict, List
 from pydantic import ValidationError
 from src.schemas.ollama import RAGResponse
 
-
+#RAG 提示词构建类，用于生成标准的 RAG 提示词
 class RAGPromptBuilder:
-    """Builder class for creating RAG prompts."""
-
     def __init__(self):
-        """Initialize the prompt builder."""
+        """初始化提示词构建器"""
+        # 获取当前文件所在目录下的 prompts 文件夹路径
         self.prompts_dir = Path(__file__).parent / "prompts"
+        # 加载系统提示词
         self.system_prompt = self._load_system_prompt()
 
     def _load_system_prompt(self) -> str:
-        """Load the system prompt from the text file.
-
-        Returns:
-            System prompt string
-        """
+        #从文本文件加载系统提示词
         prompt_file = self.prompts_dir / "rag_system.txt"
         if not prompt_file.exists():
-            # Fallback to default prompt if file doesn't exist
+            # 如果文件不存在，使用默认提示词
             return (
                 "You are an AI assistant specialized in answering questions about "
                 "academic papers from arXiv. Base your answer STRICTLY on the provided "
@@ -33,97 +32,95 @@ class RAGPromptBuilder:
         return prompt_file.read_text().strip()
 
     def create_rag_prompt(self, query: str, chunks: List[Dict[str, Any]]) -> str:
-        """Create a RAG prompt with query and retrieved chunks.
+        """根据用户问题和检索到的文本块构建完整 RAG 提示词
 
-        Args:
-            query: User's question
-            chunks: List of retrieved chunks with metadata from OpenSearch
+        参数：
+            query: 用户问题
+            chunks: 从数据库检索到的文本块列表（含元数据）
 
-        Returns:
-            Formatted prompt string
+        返回：
+            格式化后的完整提示词
         """
         prompt = f"{self.system_prompt}\n\n"
-        prompt += "### Context from Papers:\n\n"
+        prompt += "### 论文上下文信息:\n\n"
 
         for i, chunk in enumerate(chunks, 1):
-            # Get the actual chunk text
+            # 获取文本块内容
             chunk_text = chunk.get("chunk_text", chunk.get("content", ""))
             arxiv_id = chunk.get("arxiv_id", "")
 
-            # Only include minimal metadata - just arxiv_id for citation
+            # 加入最小元数据：仅论文编号用于引用
             prompt += f"[{i}. arXiv:{arxiv_id}]\n"
             prompt += f"{chunk_text}\n\n"
 
-        prompt += f"### Question:\n{query}\n\n"
+        prompt += f"### 用户问题:\n{query}\n\n"
         prompt += (
-            "### Answer:\nProvide a natural, conversational response (not JSON) and cite sources using [arXiv:id] format.\n\n"
+            "### 回答要求:\n请用自然、对话式的语言回答（不要返回JSON），并使用 [arXiv:id] 格式标注来源。\n\n"
         )
 
         return prompt
 
     def create_structured_prompt(self, query: str, chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Create a prompt for Ollama with structured output format.
+        """为模型构建带结构化输出格式的提示词
 
-        Args:
-            query: User's question
-            chunks: List of retrieved chunks
+        参数：
+            query: 用户问题
+            chunks: 检索到的文本块
 
-        Returns:
-            Dictionary with prompt and format schema for Ollama
+        返回：
+            包含提示词和JSON格式约束的字典（供模型使用）
         """
         prompt_text = self.create_rag_prompt(query, chunks)
 
-        # Return prompt with Pydantic model schema for structured output
+        # 返回提示词 + Pydantic 模型定义的JSON结构
         return {
             "prompt": prompt_text,
             "format": RAGResponse.model_json_schema(),
         }
 
-
+#大模型返回结果解析器
 class ResponseParser:
-    """Parser for LLM responses."""
-
     @staticmethod
     def parse_structured_response(response: str) -> Dict[str, Any]:
-        """Parse a structured response from Ollama.
+        """解析模型返回的结构化结果
 
-        Args:
-            response: Raw LLM response string
+        参数：
+            response: 模型原始返回字符串
 
-        Returns:
-            Dictionary with parsed response
+        返回：
+            解析后的字典格式数据
         """
         try:
-            # Try to parse as JSON and validate with Pydantic
+            # 尝试直接解析JSON并通过Pydantic校验
             parsed_json = json.loads(response)
             validated_response = RAGResponse(**parsed_json)
             return validated_response.model_dump()
         except (json.JSONDecodeError, ValidationError):
-            # Fallback: try to extract JSON from the response
+            # 解析失败：使用备用方案从文本中提取JSON
             return ResponseParser._extract_json_fallback(response)
 
     @staticmethod
     def _extract_json_fallback(response: str) -> Dict[str, Any]:
-        """Extract JSON from response text as fallback.
+        """备用方案：从返回文本中提取JSON内容
 
-        Args:
-            response: Raw response text
+        参数：
+            response: 模型原始返回内容
 
-        Returns:
-            Dictionary with extracted content or fallback
+        返回：
+            提取后的字典数据
         """
-        # Try to find JSON in the response
+        # 正则查找 {...} 格式的JSON
         json_match = re.search(r"\{.*\}", response, re.DOTALL)
         if json_match:
             try:
                 parsed = json.loads(json_match.group())
-                # Validate with Pydantic, using defaults for missing fields
+                # 使用Pydantic校验，缺失字段自动使用默认值
                 validated = RAGResponse(**parsed)
                 return validated.model_dump()
             except (json.JSONDecodeError, ValidationError):
                 pass
 
-        # Final fallback: return response as plain text
+        # 最终兜底：直接把返回内容当作文本答案
         return {
             "answer": response,
             "sources": [],

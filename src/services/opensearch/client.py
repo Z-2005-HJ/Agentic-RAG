@@ -1,5 +1,17 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
-"""Unified OpenSearch client supporting both simple BM25 and hybrid search."""
+'''
+1.health_check检查是否能连上Opensearch、get_index_stats查看索引里有多少数据
+2.setup_indices(force=True/False)系统初始化
+    调用 _create_hybrid_index：创建存储论文分块的表
+    调用 _create_rrf_pipeline：创建混合搜索结果融合器
+3.搜索：
+search_papers调用_search_bm25_only只用BM25搜索
+search_chunks_vector只用向量搜索
+search_chunks_hybrid调用_search_hybrid_native执行混合搜索
+search_unified调用_search_bm25_only、_search_hybrid_native对外的统一搜索入口
+4.数据写入：index_chunk单条写入，bulk_index_chunks批量写入
+5.数据删除：delete_paper_chunks按论文ID删除搜友分块
+6.数据查询：get_chunks_by_paper按论文ID获取所有分块
+'''
 
 import logging
 from typing import Any, Dict, List, Optional
@@ -7,31 +19,35 @@ from typing import Any, Dict, List, Optional
 from opensearchpy import OpenSearch
 from src.config import Settings
 
-from .index_config_hybrid import ARXIV_PAPERS_CHUNKS_MAPPING, HYBRID_RRF_PIPELINE
+from .index_config_hybrid import  ARXIV_PAPERS_CHUNKS_MAPPING, HYBRID_RRF_PIPELINE
 from .query_builder import QueryBuilder
 
 logger = logging.getLogger(__name__)
 
 
 class OpenSearchClient:
-    """OpenSearch client supporting BM25 and hybrid search with native RRF."""
 
     def __init__(self, host: str, settings: Settings):
         self.host = host
         self.settings = settings
         self.index_name = f"{settings.opensearch.index_name}-{settings.opensearch.chunk_index_suffix}"
+        #拼接生成最终的Opensearch索引名称
 
         self.client = OpenSearch(
             hosts=[host],
+            #Opensearch服务的地址
             use_ssl=False,
+            #不启用HTTPS加密链接
             verify_certs=False,
+            #不验证SSL证书
             ssl_show_warn=False,
+            #关闭SSL相关的警告信息
         )
 
         logger.info(f"OpenSearch client initialized with host: {host}")
 
     def health_check(self) -> bool:
-        """Check if OpenSearch cluster is healthy."""
+    #检查健康状态
         try:
             health = self.client.cluster.health()
             return health["status"] in ["green", "yellow"]
@@ -40,13 +56,16 @@ class OpenSearchClient:
             return False
 
     def get_index_stats(self) -> Dict[str, Any]:
-        """Get statistics for the hybrid index."""
+    #获取OpenSearch索引的统计信息（是否存在、多少文档、占用空间…）
         try:
             if not self.client.indices.exists(index=self.index_name):
                 return {"index_name": self.index_name, "exists": False, "document_count": 0}
+            #判断索引是否存在
 
             stats_response = self.client.indices.stats(index=self.index_name)
+            #调用opensearch API获取索引统计数据
             index_stats = stats_response["indices"][self.index_name]["total"]
+            #从返回的大字典取出总统计部分，结构为indices-索引名-total
 
             return {
                 "index_name": self.index_name,
@@ -61,18 +80,13 @@ class OpenSearchClient:
             return {"index_name": self.index_name, "exists": False, "document_count": 0, "error": str(e)}
 
     def setup_indices(self, force: bool = False) -> Dict[str, bool]:
-        """Setup the hybrid search index and RRF pipeline."""
+    #force表示要不要强制重建，如果为true，就会先删掉旧的再重建
         results = {}
         results["hybrid_index"] = self._create_hybrid_index(force)
         results["rrf_pipeline"] = self._create_rrf_pipeline(force)
         return results
 
     def _create_hybrid_index(self, force: bool = False) -> bool:
-        """Create hybrid index for all search types (BM25, vector, hybrid).
-
-        :param force: If True, recreate index even if it exists
-        :returns: True if created, False if already exists
-        """
         try:
             if force and self.client.indices.exists(index=self.index_name):
                 self.client.indices.delete(index=self.index_name)
@@ -87,8 +101,6 @@ class OpenSearchClient:
             return False
 
         except Exception as e:
-            # Handle race condition when multiple workers start simultaneously:
-            # all check exists() -> False, all try to create, only one succeeds.
             if "resource_already_exists_exception" in str(e):
                 logger.info(f"Hybrid index already exists (created by another worker): {self.index_name}")
                 return False
@@ -96,11 +108,6 @@ class OpenSearchClient:
             raise
 
     def _create_rrf_pipeline(self, force: bool = False) -> bool:
-        """Create RRF search pipeline for native hybrid search.
-
-        :param force: If True, recreate pipeline even if it exists
-        :returns: True if created, False if already exists
-        """
         try:
             pipeline_id = HYBRID_RRF_PIPELINE["id"]
 
@@ -135,21 +142,12 @@ class OpenSearchClient:
     def search_papers(
         self, query: str, size: int = 10, from_: int = 0, categories: Optional[List[str]] = None, latest: bool = True
     ) -> Dict[str, Any]:
-        """BM25 search for papers."""
         return self._search_bm25_only(query=query, size=size, from_=from_, categories=categories, latest=latest)
 
     def search_chunks_vector(
         self, query_embedding: List[float], size: int = 10, categories: Optional[List[str]] = None
     ) -> Dict[str, Any]:
-        """Pure vector search on chunks.
-
-        :param query_embedding: Query embedding vector
-        :param size: Number of results
-        :param categories: Optional category filter
-        :returns: Search results
-        """
         try:
-            # Build filter
             filter_clause = []
             if categories:
                 filter_clause.append({"terms": {"categories": categories}})
@@ -190,24 +188,11 @@ class OpenSearchClient:
         use_hybrid: bool = True,
         min_score: float = 0.0,
     ) -> Dict[str, Any]:
-        """Unified search method supporting BM25, vector, and hybrid modes.
 
-        :param query: Text query for search
-        :param query_embedding: Optional embedding for vector/hybrid search
-        :param size: Number of results to return
-        :param from_: Offset for pagination
-        :param categories: Optional category filter
-        :param latest: Sort by date instead of relevance
-        :param use_hybrid: If True and embedding provided, use hybrid search
-        :param min_score: Minimum score threshold
-        :returns: Search results
-        """
         try:
-            # If no embedding provided or hybrid disabled, use BM25 only
             if not query_embedding or not use_hybrid:
                 return self._search_bm25_only(query=query, size=size, from_=from_, categories=categories, latest=latest)
 
-            # Use native OpenSearch hybrid search with RRF pipeline
             return self._search_hybrid_native(
                 query=query, query_embedding=query_embedding, size=size, categories=categories, min_score=min_score
             )
@@ -216,17 +201,17 @@ class OpenSearchClient:
             logger.error(f"Unified search error: {e}")
             return {"total": 0, "hits": []}
 
+    #只用BM25关键词检索，从论文分块里查找，并返回格式化结果
     def _search_bm25_only(
         self, query: str, size: int, from_: int, categories: Optional[List[str]], latest: bool
     ) -> Dict[str, Any]:
-        """Pure BM25 search implementation."""
         builder = QueryBuilder(
             query=query,
             size=size,
             from_=from_,
             categories=categories,
             latest_papers=latest,
-            search_chunks=True,  # Enable chunk search mode
+            search_chunks=True,
         )
         search_body = builder.build()
 
@@ -247,10 +232,10 @@ class OpenSearchClient:
         logger.info(f"BM25 search for '{query[:50]}...' returned {results['total']} results")
         return results
 
+    #用混合检索，BM25关键词+向量语义
     def _search_hybrid_native(
         self, query: str, query_embedding: List[float], size: int, categories: Optional[List[str]], min_score: float
     ) -> Dict[str, Any]:
-        """Native OpenSearch hybrid search with RRF pipeline."""
         builder = QueryBuilder(
             query=query, size=size * 2, from_=0, categories=categories, latest_papers=False, search_chunks=True
         )
@@ -267,7 +252,6 @@ class OpenSearchClient:
             "highlight": bm25_search_body["highlight"],
         }
 
-        # Execute search with RRF pipeline
         response = self.client.search(
             index=self.index_name, body=search_body, params={"search_pipeline": HYBRID_RRF_PIPELINE["id"]}
         )
@@ -291,6 +275,7 @@ class OpenSearchClient:
         logger.info(f"Native hybrid search for '{query[:50]}...' returned {results['total']} results")
         return results
 
+    #这个函数调用上一个函数_search_hybrid_native，做一个对外的公开接口
     def search_chunks_hybrid(
         self,
         query: str,
@@ -299,18 +284,12 @@ class OpenSearchClient:
         categories: Optional[List[str]] = None,
         min_score: float = 0.0,
     ) -> Dict[str, Any]:
-        """Hybrid search combining BM25 and vector similarity using native RRF."""
         return self._search_hybrid_native(
             query=query, query_embedding=query_embedding, size=size, categories=categories, min_score=min_score
         )
 
+    #把论文分块+向量写入Opensearch里面，让它能够被搜索到
     def index_chunk(self, chunk_data: Dict[str, Any], embedding: List[float]) -> bool:
-        """Index a single chunk with its embedding.
-
-        :param chunk_data: Chunk data dictionary
-        :param embedding: Embedding vector
-        :returns: True if successful
-        """
         try:
             chunk_data["embedding"] = embedding
 
@@ -322,12 +301,8 @@ class OpenSearchClient:
             logger.error(f"Error indexing chunk: {e}")
             return False
 
+    #批量插入大量论文分块和向量到opensearch里面
     def bulk_index_chunks(self, chunks: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Bulk index multiple chunks with embeddings.
-
-        :param chunks: List of dicts with 'chunk_data' and 'embedding'
-        :returns: Statistics
-        """
         from opensearchpy import helpers
 
         try:
@@ -348,12 +323,8 @@ class OpenSearchClient:
             logger.error(f"Bulk chunk indexing error: {e}")
             raise
 
+    #根据论文的ID，一次性删除这篇论文对应的所有分块数据
     def delete_paper_chunks(self, arxiv_id: str) -> bool:
-        """Delete all chunks for a specific paper.
-
-        :param arxiv_id: ArXiv ID of the paper
-        :returns: True if deletion was successful
-        """
         try:
             response = self.client.delete_by_query(
                 index=self.index_name, body={"query": {"term": {"arxiv_id": arxiv_id}}}, refresh=True
@@ -367,12 +338,8 @@ class OpenSearchClient:
             logger.error(f"Error deleting chunks: {e}")
             return False
 
+    #查出这篇论文被切成的所有chunks，按顺序返回
     def get_chunks_by_paper(self, arxiv_id: str) -> List[Dict[str, Any]]:
-        """Get all chunks for a specific paper.
-
-        :param arxiv_id: ArXiv ID of the paper
-        :returns: List of chunks sorted by chunk_index
-        """
         try:
             search_body = {
                 "query": {"term": {"arxiv_id": arxiv_id}},

@@ -1,5 +1,4 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
-# Grade documents for relevance (used in grade_documents_node)
+# 评分文档相关性（在 grade_documents_node 中使用）
 GRADE_DOCUMENTS_PROMPT = """You are a grader assessing relevance of retrieved documents to a user question.
 
 Retrieved Documents:
@@ -13,7 +12,7 @@ Also provide brief reasoning for your decision.
 
 Respond in JSON format with 'binary_score' (yes/no) and 'reasoning' fields."""
 
-# Rewrite query for better retrieval
+# 优化重写查询问题，提升检索效果
 REWRITE_PROMPT = """You are a question re-writer that converts an input question to a better version that is optimized for retrieving relevant documents.
 
 Look at the initial question and try to reason about the underlying semantic intent or meaning.
@@ -24,7 +23,7 @@ Here is the initial question:
 Formulate an improved question that will retrieve more relevant documents.
 Provide only the improved question without any preamble or explanation."""
 
-# System message for query generation/response
+# 生成回答的系统消息（定义AI身份与行为）
 SYSTEM_MESSAGE = """You are an AI assistant specializing in academic research papers from arXiv.
 Your domain of expertise is: Computer Science, Machine Learning, AI, and related technical research.
 
@@ -41,7 +40,7 @@ Do NOT use the tool when:
 
 When you use the retrieval tool, you will receive relevant paper excerpts to help answer the question."""
 
-# Decision prompt for routing
+# 路由决策提示词（决定下一步：检索 or 直接回答）
 DECISION_PROMPT = """You are an AI assistant that ONLY helps with academic research papers from arXiv in Computer Science, AI, and Machine Learning.
 
 Question: "{question}"
@@ -64,7 +63,7 @@ Answer with ONLY ONE WORD: "RETRIEVE" or "RESPOND"
 
 Your answer:"""
 
-# Direct response prompt (no retrieval)
+# 直接回复提示词（无需检索，超出领域时使用）
 DIRECT_RESPONSE_PROMPT = """You are an AI assistant specializing in academic research papers from arXiv (Computer Science, AI, ML).
 
 The following question appears to be outside the scope of academic research papers or doesn't require retrieval from research literature:
@@ -75,7 +74,7 @@ Explain that this question is outside your domain of expertise (arXiv research p
 
 Answer:"""
 
-# Guardrail validation prompt (used in guardrail_node)
+# 安全护栏校验提示词（在 guardrail_node 中使用）
 GUARDRAIL_PROMPT = """You are a guardrail evaluator assessing whether a user query is within the scope of academic research papers from arXiv in Computer Science, AI, and Machine Learning.
 
 User Query: {question}
@@ -97,7 +96,7 @@ Provide:
 
 Respond in JSON format with 'score' (integer 0-100) and 'reason' (string) fields."""
 
-# Answer generation prompt (used in generate_answer_node)
+# 最终答案生成提示词（在 generate_answer_node 中使用）
 GENERATE_ANSWER_PROMPT = """You are an AI research assistant specializing in academic papers from arXiv in Computer Science, AI, and Machine Learning.
 
 Your task is to answer the user's question using ONLY the information from the retrieved research papers provided below.

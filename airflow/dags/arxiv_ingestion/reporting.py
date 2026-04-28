@@ -1,28 +1,33 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
 import json
 import logging
 from datetime import datetime
 
+# 导入缓存服务
 from .common import get_cached_services
 
 logger = logging.getLogger(__name__)
 
-
+#收集当天论文抓取、索引构建的所有统计数据，
+# 生成一份完整的每日运行报告，包含论文数量、分块数、数据库总量、索引状态。
 def generate_daily_report(**context):
-    """Generate a daily report of the ingestion pipeline results.
+    """
+    生成数据入库流程的每日统计报告。
 
-    Collects statistics from all previous tasks and generates a summary report.
+    收集前面所有任务的统计数据，生成一份汇总报告。
     """
     logger.info("Generating daily ingestion report")
 
+    # 获取任务实例（Airflow 上下文）
     ti = context.get("ti")
     if not ti:
         logger.warning("No task instance available, generating basic report")
         return {"status": "basic_report", "message": "No task instance for XCom data"}
 
+    # 从上游任务拉取统计结果
     fetch_stats = ti.xcom_pull(task_ids="fetch_daily_papers", key="fetch_results") or {}
     hybrid_stats = ti.xcom_pull(task_ids="index_papers_hybrid", key="hybrid_index_stats") or {}
 
+    # 组装报告主体
     report = {
         "execution_date": context.get("execution_date", datetime.now()).isoformat(),
         "fetch_statistics": {
@@ -40,8 +45,10 @@ def generate_daily_report(**context):
     }
 
     try:
+        # 获取服务实例
         _arxiv_client, _pdf_parser, database, _metadata_fetcher, opensearch_client = get_cached_services()
 
+        # 查询数据库总论文数
         with database.get_session() as session:
             from sqlalchemy import func
             from src.models.paper import Paper
@@ -49,12 +56,11 @@ def generate_daily_report(**context):
             total_papers = session.query(func.count(Paper.id)).scalar()
             report["database_statistics"] = {"total_papers": total_papers}
 
+        # 检查 OpenSearch 状态并获取索引统计
         if opensearch_client.health_check():
             try:
                 stats_response = opensearch_client.client.indices.stats(index=opensearch_client.index_name)
-
                 count_response = opensearch_client.client.count(index=opensearch_client.index_name)
-
                 index_stats = stats_response["indices"][opensearch_client.index_name]["total"]
 
                 report["opensearch_statistics"] = {
@@ -69,6 +75,7 @@ def generate_daily_report(**context):
         logger.error(f"Failed to get statistics: {e}")
         report["error"] = str(e)
 
+    # 打印并推送报告
     logger.info("Daily Ingestion Report:")
     logger.info(json.dumps(report, indent=2))
 

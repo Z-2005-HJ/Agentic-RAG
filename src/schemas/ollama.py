@@ -1,14 +1,9 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
-"""Pydantic models for Ollama structured outputs."""
-
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-
+#大模型LLM的答案格式标准
 class RAGResponse(BaseModel):
-    """Structured response model for RAG queries."""
-
     answer: str = Field(description="Comprehensive answer based on the provided paper excerpts")
     sources: List[str] = Field(
         default_factory=list,

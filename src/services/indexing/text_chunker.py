@@ -1,4 +1,16 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+整个TextChunker就是把一篇长论文，切成大小合适、上下文完整、
+无垃圾内容的小文本，用于后续向量化、存入数据库、RAG检索
+
+总入口：chunk_paper
+1.如果有章节，就走智能分块
+ _chunk_by_sections
+    _parse_sections解析各种各样的sections，全部变成字典形式
+    _filter_sections过滤无效/垃圾章节
+        _is_metadata_section检测垃圾标题
+        _is_duplicate_abstract检测和摘要高度重复
+        _is_metadata_content不看标题，检测垃圾内容
+'''
 import json
 import logging
 import re
@@ -10,19 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class TextChunker:
-    """Service for chunking text into overlapping segments.
-
-    Uses word-based chunking with configurable chunk size and overlap.
-    Default: 600 words per chunk with 100 word overlap.
-    """
-
     def __init__(self, chunk_size: int = 600, overlap_size: int = 100, min_chunk_size: int = 100):
-        """Initialize text chunker.
-
-        :param chunk_size: Target number of words per chunk
-        :param overlap_size: Number of overlapping words between chunks
-        :param min_chunk_size: Minimum words for a chunk to be valid
-        """
         self.chunk_size = chunk_size
         self.overlap_size = overlap_size
         self.min_chunk_size = min_chunk_size
@@ -34,24 +34,19 @@ class TextChunker:
             f"Text chunker initialized: chunk_size={chunk_size}, overlap_size={overlap_size}, min_chunk_size={min_chunk_size}"
         )
 
+    #把输入的text字符串，分隔成一个单词列表
     def _split_into_words(self, text: str) -> List[str]:
-        """Split text into words while preserving whitespace information.
-
-        :param text: Input text
-        :returns: List of words
-        """
-        # Split on whitespace while keeping the words
         words = re.findall(r"\S+", text)
+        #re.findall正则表达式模块的函数，找出所有匹配的字符串，返回一个列表
+        #r"\S+"：\S匹配非空白字符，+：匹配前面的模式一次或多次
+        #合起来就是匹配一段连续的非空白字符
         return words
 
+    #把之前用 _split_into_words 分割好的单词列表，重新拼接成完整的文本字符串
     def _reconstruct_text(self, words: List[str]) -> str:
-        """Reconstruct text from words.
-
-        :param words: List of words
-        :returns: Reconstructed text
-        """
         return " ".join(words)
 
+    #论文分块的总入口，决定用那种方式把论文切成小块
     def chunk_paper(
         self,
         title: str,
@@ -61,24 +56,8 @@ class TextChunker:
         paper_id: str,
         sections: Optional[Union[Dict[str, str], str, list]] = None,
     ) -> List[TextChunk]:
-        """Chunk a paper using hybrid section-based approach.
-
-        Strategy:
-        - For sections 100-800 words: Use as single chunk with title+abstract
-        - For sections <100 words: Combine with adjacent sections
-        - For sections >800 words: Split using traditional word-based chunking
-        - Fallback to traditional chunking if no sections available
-
-        :param title: Paper title
-        :param abstract: Paper abstract
-        :param full_text: Full text content
-        :param arxiv_id: ArXiv ID of the paper
-        :param paper_id: Database ID of the paper
-        :param sections: Dictionary or JSON string of sections
-        :returns: List of text chunks with metadata
-        """
-        # Try section-based chunking first
         if sections:
+        #如果有章节结构，就优先按章节分块
             try:
                 section_chunks = self._chunk_by_sections(title, abstract, arxiv_id, paper_id, sections)
                 if section_chunks:
@@ -87,32 +66,25 @@ class TextChunker:
             except Exception as e:
                 logger.warning(f"Section-based chunking failed for {arxiv_id}: {e}")
 
-        # Fallback to traditional word-based chunking
         logger.info(f"Using traditional word-based chunking for {arxiv_id}")
         return self.chunk_text(full_text, arxiv_id, paper_id)
+        #调用普通分块方法，直接按单词数量切分，返回最终分块结果
+        #优先按章节分块，失败或者没有章节，就降级用普通单词分块
 
+    #最基础的按单词分块，把文本切成固定大小、带重叠的小块，用于向量检索
     def chunk_text(self, text: str, arxiv_id: str, paper_id: str) -> List[TextChunk]:
-        """Chunk text into overlapping segments.
-
-        :param text: Full text to chunk
-        :param arxiv_id: ArXiv ID of the paper
-        :param paper_id: Database ID of the paper
-        :returns: List of text chunks with metadata
-        """
         if not text or not text.strip():
             logger.warning(f"Empty text provided for paper {arxiv_id}")
             return []
 
-        # Split text into words
         words = self._split_into_words(text)
 
         if len(words) < self.min_chunk_size:
             logger.warning(f"Text for paper {arxiv_id} has only {len(words)} words, less than minimum {self.min_chunk_size}")
-            # Return single chunk if text is too small
             if words:
                 return [
                     TextChunk(
-                        text=self._reconstruct_text(words, text),
+                        text=self._reconstruct_text(words),
                         metadata=ChunkMetadata(
                             chunk_index=0,
                             start_char=0,
@@ -126,29 +98,28 @@ class TextChunker:
                     )
                 ]
             return []
+        #如果文本太短了就不切分了，直接返回一个整块，如果没有单词，反回空列表
 
         chunks = []
         chunk_index = 0
         current_position = 0
+        #chunks：存所有块，chunk_index：块编号（第0块、第1块…），current_position：当前切到第几个单词
 
         while current_position < len(words):
-            # Calculate chunk boundaries
             chunk_start = current_position
             chunk_end = min(current_position + self.chunk_size, len(words))
 
-            # Extract chunk words
             chunk_words = words[chunk_start:chunk_end]
             chunk_text = self._reconstruct_text(chunk_words)
 
-            # Calculate character offsets (approximate)
             start_char = len(" ".join(words[:chunk_start])) if chunk_start > 0 else 0
             end_char = len(" ".join(words[:chunk_end]))
+            #计算字符级起始位置
 
-            # Calculate overlaps
             overlap_with_previous = min(self.overlap_size, chunk_start) if chunk_start > 0 else 0
             overlap_with_next = self.overlap_size if chunk_end < len(words) else 0
+            #计算块之间的重复单词数
 
-            # Create chunk
             chunk = TextChunk(
                 text=chunk_text,
                 metadata=ChunkMetadata(
@@ -158,18 +129,18 @@ class TextChunker:
                     word_count=len(chunk_words),
                     overlap_with_previous=overlap_with_previous,
                     overlap_with_next=overlap_with_next,
-                    section_title=None,  # Could be enhanced with section detection
+                    section_title=None,
                 ),
+
                 arxiv_id=arxiv_id,
                 paper_id=paper_id,
             )
             chunks.append(chunk)
+            # 创建一个文本块，存入块列表
 
-            # Move to next chunk position (with overlap)
             current_position += self.chunk_size - self.overlap_size
             chunk_index += 1
 
-            # Break if we've processed all words
             if chunk_end >= len(words):
                 break
 
@@ -177,92 +148,89 @@ class TextChunker:
 
         return chunks
 
+    #按照章节智能分块，根据论文章节大小，自动决定整块用、合并小章节、拆分大章节
     def _chunk_by_sections(
         self, title: str, abstract: str, arxiv_id: str, paper_id: str, sections: Union[Dict[str, str], str, list]
     ) -> List[TextChunk]:
-        """Implement hybrid section-based chunking strategy.
-
-        :param title: Paper title
-        :param abstract: Paper abstract
-        :param arxiv_id: ArXiv ID
-        :param paper_id: Database ID
-        :param sections: Sections data
-        :returns: List of text chunks
-        """
-        # Parse sections data
         sections_dict = self._parse_sections(sections)
+        #把传入的章节数据，统一解析成字典
         if not sections_dict:
             return []
 
-        # Filter and clean sections
         sections_dict = self._filter_sections(sections_dict, abstract)
+        #过滤无用章节，去掉作者、邮箱、重复摘要、元数据等垃圾内容
         if not sections_dict:
             logger.warning(f"No meaningful sections found after filtering for {arxiv_id}")
             return []
 
-        # Create header (title + abstract)
         header = f"{title}\n\nAbstract: {abstract}\n\n"
+        #创建头部信息，每一块都会带上标题+摘要
 
-        # Process sections using hybrid strategy
         chunks = []
-        small_sections = []  # Buffer for combining small sections
+        small_sections = []
 
         section_items = list(sections_dict.items())
+        #把章节字典转成列表，方便遍历
 
         for i, (section_title, section_content) in enumerate(section_items):
             content_str = str(section_content) if section_content else ""
             section_words = len(content_str.split())
 
+            #章节太短，小于100词，先攒起来，等待合并
             if section_words < 100:
-                # Collect small sections to combine later
                 small_sections.append((section_title, content_str, section_words))
 
-                # If this is the last section or next section is large, process accumulated small sections
                 if i == len(section_items) - 1 or len(str(section_items[i + 1][1]).split()) >= 100:
                     chunks.extend(self._create_combined_chunk(header, small_sections, chunks, arxiv_id, paper_id))
                     small_sections = []
+                #如果已经到了最后一个章节、或者下一个章节是大章节，
+                # 就调用_create_combined_chunk合并小章节，合并之后清空小章节缓存
 
             elif 100 <= section_words <= 800:
-                # Perfect size - create single chunk
                 chunk_text = f"{header}Section: {section_title}\n\n{content_str}"
                 chunk = self._create_section_chunk(chunk_text, section_title, len(chunks), arxiv_id, paper_id)
                 chunks.append(chunk)
+            #如果大小在100-800之间，可以直接作为一个完整块，
+            # 调用_create_section_chunk带上标题摘要和章节内容，一起拼成一个chunk
 
             else:
-                # Large section - split using traditional chunking
                 section_text = f"Section: {section_title}\n\n{content_str}"
                 full_section_text = f"{header}{section_text}"
 
-                # Use traditional chunking but with section context
                 section_chunks = self._split_large_section(
                     full_section_text, header, section_title, len(chunks), arxiv_id, paper_id
                 )
                 chunks.extend(section_chunks)
-
+            #如果章节太大，调用_split_large_section切成带上下文的小块
         return chunks
 
+    #这个函数是章节格式统一器，不管是传入的格式是字典、列表还是JSON字符串，都解析为字典
     def _parse_sections(self, sections: Union[Dict[str, str], str, list]) -> Dict[str, str]:
-        """Parse sections data into a dictionary."""
         if isinstance(sections, dict):
             return sections
+        #如果已经是字典了，就不管他
+
         elif isinstance(sections, list):
-            # Handle list of sections directly
+        #列表的处理方法
             result = {}
             for i, section in enumerate(sections):
                 if isinstance(section, dict):
+                #如果章节是字典
                     title = section.get("title", section.get("heading", f"Section {i + 1}"))
                     content = section.get("content", section.get("text", ""))
                     result[title] = content
                 else:
+                #如果章节只是普通字符串
                     result[f"Section {i + 1}"] = str(section)
             return result
+
         elif isinstance(sections, str):
+        #JSON的处理方法
             try:
                 parsed = json.loads(sections)
                 if isinstance(parsed, dict):
                     return parsed
                 elif isinstance(parsed, list):
-                    # Convert list to dict with enumerated keys
                     result = {}
                     for i, section in enumerate(parsed):
                         if isinstance(section, dict):
@@ -276,43 +244,38 @@ class TextChunker:
                 logger.warning("Failed to parse sections JSON")
         return {}
 
+    #把没用的章节（作者、邮箱、重复摘要、元数据）都删掉，只留下正文内容
     def _filter_sections(self, sections_dict: Dict[str, str], abstract: str) -> Dict[str, str]:
-        """Filter out unwanted sections and avoid duplication.
-
-        :param sections_dict: Dictionary of sections
-        :param abstract: Paper abstract for duplication check
-        :returns: Filtered dictionary of sections
-        """
         filtered = {}
         abstract_words = set(abstract.lower().split())
 
         for section_title, section_content in sections_dict.items():
             content_str = str(section_content).strip()
 
-            # Skip empty sections
             if not content_str:
                 continue
 
-            # Skip metadata/header sections based on title
             if self._is_metadata_section(section_title):
+            #调用_is_metadata_section，如果是元数据章节，就删掉
                 continue
 
-            # Skip sections that are duplicates of the abstract
             if self._is_duplicate_abstract(content_str, abstract, abstract_words):
+            #调用_is_duplicate_abstract，要是内容和摘要高度重复，删掉
                 logger.debug(f"Skipping duplicate abstract section: {section_title}")
                 continue
 
-            # Skip sections that are too small and contain only metadata
             if len(content_str.split()) < 20 and self._is_metadata_content(content_str):
+            #如果内容很短+是元数据，删掉
                 logger.debug(f"Skipping metadata section: {section_title}")
                 continue
 
             filtered[section_title] = content_str
+            #以上都不触发，保留这个章节
 
         return filtered
 
+    #章节检测器，用来判断一个章节是不是元数据（作者、邮箱等），是的话就过滤掉
     def _is_metadata_section(self, section_title: str) -> bool:
-        """Check if a section title indicates metadata/header content."""
         title_lower = section_title.lower().strip()
 
         metadata_indicators = [
@@ -329,30 +292,26 @@ class TextChunker:
             "accepted",
         ]
 
-        # Exact matches or very short titles that are likely metadata
         if title_lower in metadata_indicators or len(title_lower) < 5:
             return True
 
-        # Check if title contains only metadata indicators
         for indicator in metadata_indicators:
             if indicator in title_lower and len(title_lower) < 20:
                 return True
 
         return False
 
+    #内容重复检测器，专门判断章节内容是不是和摘要高度重复，如果是，就判定为重复，后面就过滤掉
     def _is_duplicate_abstract(self, content: str, abstract: str, abstract_words: set) -> bool:
-        """Check if section content is a duplicate of the abstract."""
         content_lower = content.lower().strip()
         abstract_lower = abstract.lower().strip()
 
-        # Direct string match (allowing for minor formatting differences)
         if abstract_lower in content_lower or content_lower in abstract_lower:
             return True
 
-        # Word overlap check - if >80% of words overlap, likely duplicate
         content_words = set(content_lower.split())
 
-        if len(abstract_words) > 10:  # Only check for substantial abstracts
+        if len(abstract_words) > 10:
             overlap = len(abstract_words.intersection(content_words))
             overlap_ratio = overlap / len(abstract_words)
 
@@ -361,14 +320,14 @@ class TextChunker:
 
         return False
 
+
+    #垃圾内容检测器，不看标题，只看内容里有没有邮箱、大学等，短文本里出现多个就判定为垃圾文本
     def _is_metadata_content(self, content: str) -> bool:
-        """Check if content contains only metadata (emails, arxiv IDs, etc.)."""
         content_lower = content.lower()
 
-        # Check for common metadata patterns
         metadata_patterns = [
-            "@",  # Email addresses
-            "arxiv:",  # ArXiv IDs
+            "@",
+            "arxiv:",
             "university",
             "institute",
             "department",
@@ -379,23 +338,21 @@ class TextChunker:
             "preprint",
         ]
 
-        # If content is mostly metadata patterns
         word_count = len(content.split())
-        if word_count < 30:  # Short content
+        if word_count < 30:
             metadata_word_count = sum(1 for pattern in metadata_patterns if pattern in content_lower)
-            if metadata_word_count >= 2:  # Contains multiple metadata indicators
+            if metadata_word_count >= 2:
                 return True
 
         return False
 
+    #小块合并器，把段章节合并成大小合适的块，如果实在太多，会合并到上一个块里面
     def _create_combined_chunk(
         self, header: str, small_sections: List, existing_chunks: List, arxiv_id: str, paper_id: str
     ) -> List[TextChunk]:
-        """Create chunks by combining small sections."""
         if not small_sections:
             return []
 
-        # Combine all small sections
         combined_content = []
         total_words = 0
 
@@ -403,15 +360,12 @@ class TextChunker:
             combined_content.append(f"Section: {section_title}\n\n{content}")
             total_words += word_count
 
-        combined_text = f"{header}{'\\n\\n'.join(combined_content)}"
+        combined_text = f"{header}{'\n\n'.join(combined_content)}"
 
-        # If still too small, combine with previous chunk if possible
         if total_words + len(header.split()) < 200 and existing_chunks:
-            # Try to merge with previous chunk
             prev_chunk = existing_chunks[-1]
-            merged_text = f"{prev_chunk.text}\\n\\n{'\\n\\n'.join(combined_content)}"
+            merged_text = f"{prev_chunk.text}\n\n{'\n\n'.join(combined_content)}"
 
-            # Update the previous chunk
             existing_chunks[-1] = TextChunk(
                 text=merged_text,
                 metadata=ChunkMetadata(
@@ -428,19 +382,18 @@ class TextChunker:
             )
             return []
 
-        # Create new chunk with combined content
         sections_titles = [title for title, _, _ in small_sections]
-        combined_title = " + ".join(sections_titles[:3])  # Limit title length
+        combined_title = " + ".join(sections_titles[:3])
         if len(sections_titles) > 3:
             combined_title += f" + {len(sections_titles) - 3} more"
 
         chunk = self._create_section_chunk(combined_text, combined_title, len(existing_chunks), arxiv_id, paper_id)
         return [chunk]
 
+    #块生成工具，把准备好的文本、标题、编号打包成一个标准的TextChunk格式
     def _create_section_chunk(
         self, chunk_text: str, section_title: str, chunk_index: int, arxiv_id: str, paper_id: str
     ) -> TextChunk:
-        """Create a single section-based chunk."""
         return TextChunk(
             text=chunk_text,
             metadata=ChunkMetadata(
@@ -456,17 +409,14 @@ class TextChunker:
             paper_id=paper_id,
         )
 
+    #大章节切割器，当一个章节太长是，先用普通滑动分块切开，再给每一小块都加上标题+摘要头部，保证每一块都有完整上下文
     def _split_large_section(
         self, full_section_text: str, header: str, section_title: str, base_chunk_index: int, arxiv_id: str, paper_id: str
     ) -> List[TextChunk]:
-        """Split large sections using traditional word-based chunking."""
-        # Remove header from section text for chunking, then add back to each chunk
         section_only = full_section_text[len(header) :]
 
-        # Use traditional chunking on section content
         traditional_chunks = self.chunk_text(section_only, arxiv_id, paper_id)
 
-        # Add header to each chunk and update metadata
         enhanced_chunks = []
         for i, chunk in enumerate(traditional_chunks):
             enhanced_text = f"{header}{chunk.text}"

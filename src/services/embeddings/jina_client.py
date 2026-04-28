@@ -1,4 +1,8 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+异步Jina向量模型客户端，专门负责把文本转换成向量（Embedding）
+embed_passages把论文 / 文本片段转成向量
+embed_query把用户问题转成向量
+'''
 import logging
 from typing import List
 
@@ -9,52 +13,44 @@ logger = logging.getLogger(__name__)
 
 
 class JinaEmbeddingsClient:
-    """Client for Jina AI embeddings API.
-
-    Uses Jina embeddings v3 model with 1024 dimensions optimized for retrieval.
-    Documentation: https://jina.ai/embeddings
-    """
-
+    #把连接远程API所需的全部信息准备好，创建可用的异步HTTP客户端。
     def __init__(self, api_key: str, base_url: str = "https://api.jina.ai/v1"):
-        """Initialize Jina embeddings client.
-
-        :param api_key: Jina API key
-        :param base_url: API base URL
-        """
+        #必须传入jina API key，base_url默认为jina的官方接口地址
         self.api_key = api_key
         self.base_url = base_url
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
+        #请求头，发送HTTP请求
         self.client = httpx.AsyncClient(timeout=30.0)
+        #创建异步HTTP客户端
         logger.info("Jina embeddings client initialized")
 
+    #把一批文本批量转换成向量，存入Opensearch用于检索
     async def embed_passages(self, texts: List[str], batch_size: int = 100) -> List[List[float]]:
-        """Embed text passages for indexing.
-
-        :param texts: List of text passages to embed
-        :param batch_size: Number of texts to process in each API call
-        :returns: List of embedding vectors
-        """
         embeddings = []
+        #创建空列表，用来存放所有最终向量
 
         for i in range(0, len(texts), batch_size):
             batch = texts[i : i + batch_size]
-
+            #批量处理
             request_data = JinaEmbeddingRequest(
                 model="jina-embeddings-v3", task="retrieval.passage", dimensions=1024, input=batch
             )
-
+            #构造请求体
             try:
                 response = await self.client.post(
                     f"{self.base_url}/embeddings", headers=self.headers, json=request_data.model_dump()
                 )
+                #发送异步 POST 请求，地址：/embeddings，然后带上请求头API key
                 response.raise_for_status()
+                #判断HTTP状态码
 
                 result = JinaEmbeddingResponse(**response.json())
                 batch_embeddings = [item["embedding"] for item in result.data]
                 embeddings.extend(batch_embeddings)
+                #把最终的向量都加入总列表
 
                 logger.debug(f"Embedded batch of {len(batch)} passages")
 
@@ -68,12 +64,8 @@ class JinaEmbeddingsClient:
         logger.info(f"Successfully embedded {len(texts)} passages")
         return embeddings
 
+    #异步将用户问题转成向量
     async def embed_query(self, query: str) -> List[float]:
-        """Embed a search query.
-
-        :param query: Query text to embed
-        :returns: Embedding vector for the query
-        """
         request_data = JinaEmbeddingRequest(model="jina-embeddings-v3", task="retrieval.query", dimensions=1024, input=[query])
 
         try:
@@ -94,13 +86,10 @@ class JinaEmbeddingsClient:
             raise
 
     async def close(self):
-        """Close the HTTP client."""
         await self.client.aclose()
 
     async def __aenter__(self):
-        """Async context manager entry."""
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit."""
         await self.close()

@@ -1,4 +1,15 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+整个 RAG 系统的大模型调用核心客户端,提供健康检查、模型管理、普通生成、
+流式生成、RAG 问答、RAG 流式问答全套能力，自带错误处理、日志、性能监控、结构化解析，
+是上层业务直接使用的统一入口。
+
+1.基础接口
+    health_check健康检查，list_models获取模型列表
+    generate一次性文本生成，generate_stream流式文本生成
+2.业务接口
+    generate_rag_answer，内部调用generate
+    generate_rag_answer_stream，内部调用generate_stream
+'''
 import json
 import logging
 from typing import Any, Dict, List, Optional
@@ -11,55 +22,42 @@ from src.services.ollama.prompts import RAGPromptBuilder, ResponseParser
 
 logger = logging.getLogger(__name__)
 
-
+#与本地 Ollama LLM 服务交互的客户端
 class OllamaClient:
-    """Client for interacting with Ollama local LLM service."""
-
     def __init__(self, settings: Settings):
-        """Initialize Ollama client with settings."""
+        """使用配置初始化 Ollama 客户端"""
         self.base_url = settings.ollama_host
         self.timeout = httpx.Timeout(float(settings.ollama_timeout))
         self.prompt_builder = RAGPromptBuilder()
         self.response_parser = ResponseParser()
 
     async def health_check(self) -> Dict[str, Any]:
-        """
-        Check if Ollama service is healthy and responding.
-
-        Returns:
-            Dictionary with health status information
-        """
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                # Check version endpoint for health
+                # 通过版本接口检查服务健康状态
                 response = await client.get(f"{self.base_url}/api/version")
 
                 if response.status_code == 200:
                     version_data = response.json()
                     return {
                         "status": "healthy",
-                        "message": "Ollama service is running",
+                        "message": "Ollama 服务运行正常",
                         "version": version_data.get("version", "unknown"),
                     }
                 else:
-                    raise OllamaException(f"Ollama returned status {response.status_code}")
+                    raise OllamaException(f"Ollama 返回状态码 {response.status_code}")
 
         except httpx.ConnectError as e:
-            raise OllamaConnectionError(f"Cannot connect to Ollama service: {e}")
+            raise OllamaConnectionError(f"无法连接到 Ollama 服务: {e}")
         except httpx.TimeoutException as e:
-            raise OllamaTimeoutError(f"Ollama service timeout: {e}")
+            raise OllamaTimeoutError(f"Ollama 服务请求超时: {e}")
         except OllamaException:
             raise
         except Exception as e:
-            raise OllamaException(f"Ollama health check failed: {str(e)}")
+            raise OllamaException(f"Ollama 健康检查失败: {str(e)}")
 
     async def list_models(self) -> List[Dict[str, Any]]:
-        """
-        Get list of available models.
-
-        Returns:
-            List of model information dictionaries
-        """
+    #获取本地可用的模型列表
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(f"{self.base_url}/api/tags")
@@ -68,110 +66,111 @@ class OllamaClient:
                     data = response.json()
                     return data.get("models", [])
                 else:
-                    raise OllamaException(f"Failed to list models: {response.status_code}")
+                    raise OllamaException(f"获取模型列表失败: {response.status_code}")
 
         except httpx.ConnectError as e:
-            raise OllamaConnectionError(f"Cannot connect to Ollama service: {e}")
+            raise OllamaConnectionError(f"无法连接到 Ollama 服务: {e}")
         except httpx.TimeoutException as e:
-            raise OllamaTimeoutError(f"Ollama service timeout: {e}")
+            raise OllamaTimeoutError(f"Ollama 服务请求超时: {e}")
         except OllamaException:
             raise
         except Exception as e:
-            raise OllamaException(f"Error listing models: {e}")
+            raise OllamaException(f"获取模型列表出错: {e}")
 
+    #Ollama 客户端的核心文本生成方法，负责调用本地大模型生成回答，
+    # 并自动解析 Token、耗时、性能数据，供监控（Langfuse）使用。
     async def generate(self, model: str, prompt: str, stream: bool = False, **kwargs) -> Optional[Dict[str, Any]]:
         """
-        Generate text using specified model.
+        使用指定模型生成文本
 
-        Args:
-            model: Model name to use
-            prompt: Input prompt for generation
-            stream: Whether to stream response
-            **kwargs: Additional generation parameters
+        参数：
+            model: 使用的模型名称
+            prompt: 输入提示词
+            stream: 是否流式返回
+            **kwargs: 其他生成参数
 
-        Returns:
-            Response dictionary with added usage_metadata field containing:
-                - prompt_tokens: Number of tokens in the prompt
-                - completion_tokens: Number of tokens in the completion
-                - total_tokens: Total tokens used
-                - latency_ms: Generation latency in milliseconds
+        返回：
+            包含 usage_metadata 的响应字典，包含：
+                - prompt_tokens: 提示词 token 数量
+                - completion_tokens: 生成内容 token 数量
+                - total_tokens: 总 token 数量
+                - latency_ms: 生成耗时（毫秒）
         """
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 data = {"model": model, "prompt": prompt, "stream": stream, **kwargs}
 
-                logger.info(f"Sending request to Ollama: model={model}, stream={stream}, extra_params={kwargs}")
+                logger.info(f"发送请求至 Ollama: model={model}, stream={stream}, 额外参数={kwargs}")
                 response = await client.post(f"{self.base_url}/api/generate", json=data)
 
                 if response.status_code == 200:
                     result = response.json()
 
-                    # Parse Ollama usage metadata and convert to Langfuse-compatible format
+                    # 解析 Ollama 返回的用量信息，转为通用格式
                     usage_metadata = {}
 
-                    # Ollama returns these fields in the response
                     if "prompt_eval_count" in result:
                         usage_metadata["prompt_tokens"] = result.get("prompt_eval_count", 0)
                     if "eval_count" in result:
                         usage_metadata["completion_tokens"] = result.get("eval_count", 0)
 
-                    # Calculate total tokens
+                    # 计算总 token
                     if usage_metadata:
                         usage_metadata["total_tokens"] = (
-                            usage_metadata.get("prompt_tokens", 0) +
-                            usage_metadata.get("completion_tokens", 0)
+                                usage_metadata.get("prompt_tokens", 0) +
+                                usage_metadata.get("completion_tokens", 0)
                         )
 
-                    # Parse timing information (convert nanoseconds to milliseconds)
+                    # 解析时间信息（纳秒转毫秒）
                     if "total_duration" in result:
-                        # Ollama returns duration in nanoseconds
                         usage_metadata["latency_ms"] = round(result["total_duration"] / 1_000_000, 2)
 
-                    # Add timing breakdown if available
+                    # 附加详细耗时
                     if "prompt_eval_duration" in result:
                         usage_metadata["prompt_eval_duration_ms"] = round(result["prompt_eval_duration"] / 1_000_000, 2)
                     if "eval_duration" in result:
                         usage_metadata["eval_duration_ms"] = round(result["eval_duration"] / 1_000_000, 2)
 
-                    # Attach usage metadata to the response
+                    # 将用量信息附加到结果中
                     result["usage_metadata"] = usage_metadata
 
-                    logger.debug(f"Usage metadata: {usage_metadata}")
+                    logger.debug(f"用量信息: {usage_metadata}")
 
                     return result
                 else:
-                    raise OllamaException(f"Generation failed: {response.status_code}")
+                    raise OllamaException(f"文本生成失败: {response.status_code}")
 
         except httpx.ConnectError as e:
-            raise OllamaConnectionError(f"Cannot connect to Ollama service: {e}")
+            raise OllamaConnectionError(f"无法连接到 Ollama 服务: {e}")
         except httpx.TimeoutException as e:
-            raise OllamaTimeoutError(f"Ollama service timeout: {e}")
+            raise OllamaTimeoutError(f"Ollama 服务请求超时: {e}")
         except OllamaException:
             raise
         except Exception as e:
-            raise OllamaException(f"Error generating with Ollama: {e}")
+            raise OllamaException(f"调用 Ollama 生成文本出错: {e}")
 
+    #流式输出
     async def generate_stream(self, model: str, prompt: str, **kwargs):
         """
-        Generate text with streaming response.
+        流式生成文本
 
-        Args:
-            model: Model name to use
-            prompt: Input prompt for generation
-            **kwargs: Additional generation parameters
+        参数：
+            model: 使用的模型名称
+            prompt: 输入提示词
+            **kwargs: 其他生成参数
 
-        Yields:
-            JSON chunks from streaming response
+        生成：
+            流式响应的 JSON 块
         """
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 data = {"model": model, "prompt": prompt, "stream": True, **kwargs}
 
-                logger.info(f"Starting streaming generation: model={model}")
+                logger.info(f"开始流式生成: model={model}")
 
                 async with client.stream("POST", f"{self.base_url}/api/generate", json=data) as response:
                     if response.status_code != 200:
-                        raise OllamaException(f"Streaming generation failed: {response.status_code}")
+                        raise OllamaException(f"流式生成失败: {response.status_code}")
 
                     async for line in response.aiter_lines():
                         if line.strip():
@@ -179,43 +178,44 @@ class OllamaClient:
                                 chunk = json.loads(line)
                                 yield chunk
                             except json.JSONDecodeError:
-                                logger.warning(f"Failed to parse streaming chunk: {line}")
+                                logger.warning(f"解析流式片段失败: {line}")
                                 continue
 
         except httpx.ConnectError as e:
-            raise OllamaConnectionError(f"Cannot connect to Ollama service: {e}")
+            raise OllamaConnectionError(f"无法连接到 Ollama 服务: {e}")
         except httpx.TimeoutException as e:
-            raise OllamaTimeoutError(f"Ollama service timeout: {e}")
+            raise OllamaTimeoutError(f"Ollama 服务请求超时: {e}")
         except OllamaException:
             raise
         except Exception as e:
-            raise OllamaException(f"Error in streaming generation: {e}")
+            raise OllamaException(f"流式生成出错: {e}")
 
+    #接收用户问题 + 检索到的文档块 → 自动拼提示词 → 调用大模型
+    # → 解析返回结果 → 输出带引用的标准 RAG 回答。
     async def generate_rag_answer(
-        self,
-        query: str,
-        chunks: List[Dict[str, Any]],
-        model: str = "llama3.2",
-        use_structured_output: bool = False,
+            self,
+            query: str,
+            chunks: List[Dict[str, Any]],
+            model: str = "llama3.2",
+            use_structured_output: bool = False,
     ) -> Dict[str, Any]:
         """
-        Generate a RAG answer using retrieved chunks.
+        使用检索到的文本块生成 RAG 回答
 
-        Args:
-            query: User's question
-            chunks: Retrieved document chunks with metadata
-            model: Model to use for generation
-            use_structured_output: Whether to use Ollama's structured output feature
+        参数：
+            query: 用户问题
+            chunks: 检索到的文本块（含元数据）
+            model: 使用的模型
+            use_structured_output: 是否使用结构化输出
 
-        Returns:
-            Dictionary with answer, sources, confidence, and citations
+        返回：
+            包含答案、来源、置信度、引用的字典
         """
         try:
             if use_structured_output:
-                # Use structured output with Pydantic model
+                # 使用带格式约束的结构化输出
                 prompt_data = self.prompt_builder.create_structured_prompt(query, chunks)
 
-                # Generate with structured format
                 response = await self.generate(
                     model=model,
                     prompt=prompt_data["prompt"],
@@ -224,10 +224,9 @@ class OllamaClient:
                     format=prompt_data["format"],
                 )
             else:
-                # Fallback to plain text mode
+                # 普通文本模式
                 prompt = self.prompt_builder.create_rag_prompt(query, chunks)
 
-                # Generate without format restrictions
                 response = await self.generate(
                     model=model,
                     prompt=prompt,
@@ -237,15 +236,15 @@ class OllamaClient:
 
             if response and "response" in response:
                 answer_text = response["response"]
-                logger.debug(f"Raw LLM response: {answer_text[:500]}")
+                logger.debug(f"原始模型响应: {answer_text[:500]}")
 
                 if use_structured_output:
-                    # Try to parse structured response if enabled
+                    # 解析结构化响应
                     parsed_response = self.response_parser.parse_structured_response(answer_text)
-                    logger.debug(f"Parsed response: {parsed_response}")
+                    logger.debug(f"解析后响应: {parsed_response}")
                     return parsed_response
                 else:
-                    # For plain text response, build simple response structure
+                    # 普通文本 → 构建简单结构
                     sources = []
                     seen_urls = set()
                     for chunk in chunks:
@@ -266,42 +265,41 @@ class OllamaClient:
                         "citations": citations[:5],
                     }
             else:
-                raise OllamaException("No response generated from Ollama")
+                raise OllamaException("Ollama 未返回有效结果")
 
         except Exception as e:
-            logger.error(f"Error generating RAG answer: {e}")
-            raise OllamaException(f"Failed to generate RAG answer: {e}")
+            logger.error(f"生成 RAG 回答出错: {e}")
+            raise OllamaException(f"生成 RAG 回答失败: {e}")
 
+    #流式输出
     async def generate_rag_answer_stream(
-        self,
-        query: str,
-        chunks: List[Dict[str, Any]],
-        model: str = "llama3.2",
+            self,
+            query: str,
+            chunks: List[Dict[str, Any]],
+            model: str = "llama3.2",
     ):
         """
-        Generate a streaming RAG answer using retrieved chunks.
+        流式生成 RAG 回答
 
-        Args:
-            query: User's question
-            chunks: Retrieved document chunks with metadata
-            model: Model to use for generation
+        参数：
+            query: 用户问题
+            chunks: 检索到的文本块
+            model: 使用的模型
 
-        Yields:
-            Streaming response chunks with partial answers
+        生成：
+            流式响应片段
         """
         try:
-            # Create prompt for streaming (simpler than structured)
             prompt = self.prompt_builder.create_rag_prompt(query, chunks)
 
-            # Stream the response
             async for chunk in self.generate_stream(
-                model=model,
-                prompt=prompt,
-                temperature=0.7,
-                top_p=0.9,
+                    model=model,
+                    prompt=prompt,
+                    temperature=0.7,
+                    top_p=0.9,
             ):
                 yield chunk
 
         except Exception as e:
-            logger.error(f"Error generating streaming RAG answer: {e}")
-            raise OllamaException(f"Failed to generate streaming RAG answer: {e}")
+            logger.error(f"流式生成 RAG 回答出错: {e}")
+            raise OllamaException(f"流式生成 RAG 回答失败: {e}")

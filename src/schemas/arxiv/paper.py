@@ -1,13 +1,11 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
-
 from pydantic import BaseModel, Field
 
-
 class ArxivPaper(BaseModel):
-    """Schema for arXiv API response data."""
+#和前的数据库的paper不一样，那个paper主要是存到数据库给数据库用的
+#这个paper主要是用来给接口、数据传输用的
 
     arxiv_id: str = Field(..., description="arXiv paper ID")
     title: str = Field(..., description="Paper title")
@@ -19,7 +17,10 @@ class ArxivPaper(BaseModel):
 
 
 class PaperBase(BaseModel):
-    # Core arXiv metadata
+#公共基础模板，别的类可以直接继承他
+#ArxivPaper是刚从 arXiv 爬下来的原始数据，date是str类型
+#PaperBase是处理干净、准备存数据库的标准数据，date是datetime类型
+
     arxiv_id: str = Field(..., description="arXiv paper ID")
     title: str = Field(..., description="Paper title")
     authors: List[str] = Field(..., description="List of author names")
@@ -30,14 +31,14 @@ class PaperBase(BaseModel):
 
 
 class PaperCreate(PaperBase):
-    """Schema for creating a paper with optional parsed content."""
+#存进数据库用的格式
 
-    # Parsed PDF content (optional - added when PDF is processed)
+    #获取全文其他内容
     raw_text: Optional[str] = Field(None, description="Full raw text extracted from PDF")
     sections: Optional[List[Dict[str, Any]]] = Field(None, description="List of sections with titles and content")
     references: Optional[List[Dict[str, Any]]] = Field(None, description="List of references if extracted")
 
-    # PDF processing metadata (optional)
+    #解析器
     parser_used: Optional[str] = Field(None, description="Which parser was used (DOCLING, etc.)")
     parser_metadata: Optional[Dict[str, Any]] = Field(None, description="Additional parser metadata")
     pdf_processed: Optional[bool] = Field(False, description="Whether PDF was successfully processed")
@@ -45,28 +46,24 @@ class PaperCreate(PaperBase):
 
 
 class PaperResponse(PaperBase):
-    """Schema for paper API responses with all content."""
-
+#从数据库查出来之后，最终展示给外界的数据
     id: UUID
 
-    # Parsed PDF content (optional fields)
     raw_text: Optional[str] = Field(None, description="Full raw text extracted from PDF")
     sections: Optional[List[Dict[str, Any]]] = Field(None, description="List of sections with titles and content")
     references: Optional[List[Dict[str, Any]]] = Field(None, description="List of references if extracted")
 
-    # PDF processing metadata
     parser_used: Optional[str] = Field(None, description="Which parser was used")
     parser_metadata: Optional[Dict[str, Any]] = Field(None, description="Additional parser metadata")
     pdf_processed: bool = Field(False, description="Whether PDF was successfully processed")
     pdf_processing_date: Optional[datetime] = Field(None, description="When PDF was processed")
 
-    # Timestamps
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
-
+    #这个类让模型可以直接读取前面数据库的paper对象，同时可以被response直接解析
 
 class PaperSearchResponse(BaseModel):
     papers: List[PaperResponse]

@@ -1,8 +1,10 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+统一管理所有数据模型，简化导入路径，规范项目结构，方便维护和查找
+方便别的地方导入，只需要一行from src.schemas import就能导入不同文件里面的类或者函数
+'''
 from src.schemas.api.health import HealthResponse, ServiceStatus
 from src.schemas.api.search import SearchHit, SearchRequest, SearchResponse
 
-# ArXiv schemas
 from src.schemas.arxiv.paper import (
     ArxivPaper,
     PaperBase,
@@ -11,16 +13,12 @@ from src.schemas.arxiv.paper import (
     PaperSearchResponse,
 )
 
-# Database schemas
 from src.schemas.database.config import PostgreSQLSettings
 
-# Embeddings schemas
 from src.schemas.embeddings.jina import JinaEmbeddingRequest, JinaEmbeddingResponse
 
-# Indexing schemas (including chunking)
 from src.schemas.indexing.models import ChunkMetadata, TextChunk
 
-# PDF Parser schemas
 from src.schemas.pdf_parser.models import (
     ArxivMetadata,
     PaperFigure,
@@ -31,12 +29,7 @@ from src.schemas.pdf_parser.models import (
     PdfContent,
 )
 
-# Search schemas
-from src.schemas.search.hybrid import (
-    ChunkResult,
-    HybridSearchRequest,
-    HybridSearchResponse,
-)
+from src.schemas.api.search import HybridSearchRequest
 
 __all__ = [
     # API
@@ -69,6 +62,4 @@ __all__ = [
     "ParsedPaper",
     # Search
     "HybridSearchRequest",
-    "HybridSearchResponse",
-    "ChunkResult",
 ]

@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 import logging
 import time
 from typing import Dict, List
@@ -13,15 +12,15 @@ from ..state import AgentState
 
 logger = logging.getLogger(__name__)
 
-
+#这个函数调用大模型把用户的原始问题优化重写，让检索能查到更相关的论文，失败了就用兜底方案。
 class QueryRewriteOutput(BaseModel):
-    """Structured output for query rewriting."""
+    """查询重写的结构化输出格式"""
 
     rewritten_query: str = Field(
-        description="The improved query optimized for document retrieval"
+        description="优化后的查询语句，用于提升文档检索效果"
     )
     reasoning: str = Field(
-        description="Brief explanation of how the query was improved"
+        description="对查询优化方式的简要说明"
     )
 
 
@@ -29,25 +28,20 @@ async def ainvoke_rewrite_query_step(
     state: AgentState,
     runtime: Runtime[Context],
 ) -> Dict[str, str | List]:
-    """Rewrite the original query for better document retrieval using LLM.
-
-    This node uses an LLM to intelligently rewrite the user's query
-    to improve the chances of finding relevant documents.
-
-    :param state: Current agent state
-    :param runtime: Runtime context
-    :returns: Dictionary with rewritten_query and updated messages
     """
-    logger.info("NODE: rewrite_query")
+    使用大模型重写原始查询，以获得更好的文档检索效果
+    该节点通过大模型智能优化用户问题，提高找到相关文档的概率
+    """
+    logger.info("执行节点：重写查询")
     start_time = time.time()
 
-    # Get original query
+    # 获取原始用户问题
     original_question = state.get("original_query") or state["messages"][0].content
     current_attempt = state.get("retrieval_attempts", 0)
 
-    logger.debug(f"Rewriting query using LLM: {original_question[:100]}...")
+    logger.debug(f"使用大模型重写查询: {original_question[:100]}...")
 
-    # Create span for query rewriting
+    # 创建查询重写监控追踪
     span = None
     if runtime.context.langfuse_enabled and runtime.context.trace:
         try:
@@ -64,53 +58,53 @@ async def ainvoke_rewrite_query_step(
                     "model": runtime.context.model_name,
                 },
             )
-            logger.debug("Created Langfuse span for query rewriting")
+            logger.debug("已创建查询重写监控追踪")
         except Exception as e:
-            logger.warning(f"Failed to create span for rewrite_query node: {e}")
+            logger.warning(f"创建查询重写追踪失败: {e}")
 
-    # Use LLM to rewrite the query intelligently
+    # 使用大模型智能重写查询
     try:
-        # Create structured LLM for query rewriting
+        # 创建用于查询重写的结构化大模型
         llm = runtime.context.ollama_client.get_langchain_model(
             model=runtime.context.model_name,
-            temperature=0.3,  # Lower temperature for more focused rewriting
+            temperature=0.3,  # 较低温度让重写结果更精准
         )
         structured_llm = llm.with_structured_output(QueryRewriteOutput)
 
-        # Format prompt with original question
+        # 用原始问题构造提示词
         prompt = REWRITE_PROMPT.format(question=original_question)
 
-        logger.debug(f"Invoking LLM for query rewriting (model: {runtime.context.model_name})")
+        logger.debug(f"调用大模型进行查询重写 (模型: {runtime.context.model_name})")
         llm_start = time.time()
 
-        # Get rewritten query from LLM
+        # 获取大模型返回的重写后查询
         result: QueryRewriteOutput = await structured_llm.ainvoke(prompt)
 
-        # Validate LLM output
+        # 校验大模型输出
         if not result or not result.rewritten_query:
-            raise ValueError("LLM failed to return valid structured output for query rewriting")
+            raise ValueError("大模型未能返回有效的查询重写结果")
 
         rewritten_query = result.rewritten_query.strip()
         if not rewritten_query:
-            raise ValueError("LLM returned empty rewritten query")
+            raise ValueError("大模型返回了空的重写查询")
 
         reasoning = result.reasoning
 
         llm_duration = time.time() - llm_start
         logger.info(
-            f"Query rewritten in {llm_duration:.2f}s: "
+            f"查询重写耗时 {llm_duration:.2f}s: "
             f"'{original_question[:50]}...' -> '{rewritten_query[:50]}...'"
         )
-        logger.debug(f"Rewriting reasoning: {reasoning}")
+        logger.debug(f"重写原因: {reasoning}")
 
     except Exception as e:
-        logger.error(f"Failed to rewrite query using LLM: {e}")
-        logger.warning("Falling back to simple keyword expansion")
-        # Fallback to simple expansion if LLM fails
+        logger.error(f"大模型重写查询失败: {e}")
+        logger.warning("使用兜底策略：简单关键词扩展")
+        # 大模型失败时使用简单兜底策略
         rewritten_query = f"{original_question} research paper arxiv machine learning"
-        reasoning = "Fallback: Simple keyword expansion due to LLM error"
+        reasoning = "兜底方案：因大模型错误，使用简单关键词扩展"
 
-    # Update span with rewriting result
+    # 更新追踪信息
     if span:
         execution_time = (time.time() - start_time) * 1000
         runtime.context.langfuse_tracer.end_span(

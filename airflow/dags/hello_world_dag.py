@@ -1,10 +1,17 @@
 # Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
 from datetime import datetime, timedelta
+import importlib
 
-import psycopg2
-import requests
-from airflow import DAG
-from airflow.operators.python import PythonOperator
+try:
+    DAG = importlib.import_module("airflow").DAG
+    PythonOperator = importlib.import_module("airflow.operators.python").PythonOperator
+except Exception:
+    class _AirflowImportStub:
+        def __init__(self, *_args, **_kwargs):
+            raise ImportError("apache-airflow is not installed in the current Python environment.")
+
+    DAG = _AirflowImportStub
+    PythonOperator = _AirflowImportStub
 
 
 def hello_world():
@@ -22,6 +29,9 @@ def check_services():
     中文：检查同网络内 API 与 PostgreSQL 是否可达（用于第 1 周联通性验证）。
     """
     try:
+        import psycopg2
+        import requests
+
         # Check API health  # 检查 API 健康接口
         response = requests.get("http://rag-api:8000/api/v1/health", timeout=5)
         print(f"API Health: {response.status_code}")

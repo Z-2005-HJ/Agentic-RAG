@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -18,21 +17,20 @@ from src.services.opensearch.factory import make_opensearch_client
 from src.services.pdf_parser.factory import make_pdf_parser_service
 from src.services.telegram.factory import make_telegram_service
 
-# Setup logging  # 配置日志（格式与级别）
 logging.basicConfig(
     level=logging.INFO,
+    #设置日志为最低输出级别为info，低于info的日志不会输出
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    #发生的时间+所属模块的名字+日志级别+具体内容
 )
 logger = logging.getLogger(__name__)
+#会创建一个模块级别的日志器，命名由系统自动命名
 
 
 @asynccontextmanager
+#异步上下文管理器，启动时执行yield之前的代码，关闭时执行yield之后的代码
 async def lifespan(app: FastAPI):
-    """
-    Lifespan for the API.
-
-    中文：FastAPI 应用生命周期钩子（启动时初始化依赖，关闭时清理资源）。
-    """
+#lifespan用来管理应用启动和关闭生命周期的函数
     logger.info("Starting RAG API...")
 
     settings = get_settings()
@@ -42,7 +40,7 @@ async def lifespan(app: FastAPI):
     app.state.database = database
     logger.info("Database connected")
 
-    # Initialize search service  # 初始化 OpenSearch 检索客户端
+    #初始化 OpenSearch 检索客户端
     opensearch_client = make_opensearch_client()
     app.state.opensearch_client = opensearch_client
 

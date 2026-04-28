@@ -1,4 +1,6 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+检查数据库、搜索引擎（OpenSearch）、大模型服务（Ollama）是否全部正常运行，并返回整体健康状态。
+'''
 from fastapi import APIRouter
 from sqlalchemy import text
 
@@ -7,23 +9,17 @@ from ..schemas.api.health import HealthResponse, ServiceStatus
 from ..services.ollama import OllamaClient
 
 router = APIRouter()
-
+#创建一个健康检查路由
 
 @router.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check(settings: SettingsDep, database: DatabaseDep, opensearch_client: OpenSearchDep) -> HealthResponse:
-    """Comprehensive health check endpoint for monitoring and load balancer probes.
-
-    :returns: Service health status with version and connectivity checks
-    :rtype: HealthResponse
-    """
+    #注入三个依赖，配置、数据库、搜索引擎，返回格式为HealthResponse
     services = {}
     overall_status = "ok"
 
     def _check_service(name: str, check_func, *args, **kwargs):
-        """Helper to standardize service health checks."""
         try:
             if kwargs.get("is_async"):
-                # Handle async functions separately in the calling code
                 return check_func(*args)
             result = check_func(*args)
             services[name] = result
@@ -34,13 +30,11 @@ async def health_check(settings: SettingsDep, database: DatabaseDep, opensearch_
             services[name] = ServiceStatus(status="unhealthy", message=str(e))
             overall_status = "degraded"
 
-    # Database check
     def _check_database():
         with database.get_session() as session:
             session.execute(text("SELECT 1"))
         return ServiceStatus(status="healthy", message="Connected successfully")
 
-    # OpenSearch check
     def _check_opensearch():
         if not opensearch_client.health_check():
             return ServiceStatus(status="unhealthy", message="Not responding")
@@ -50,11 +44,11 @@ async def health_check(settings: SettingsDep, database: DatabaseDep, opensearch_
             message=f"Index '{stats.get('index_name', 'unknown')}' with {stats.get('document_count', 0)} documents",
         )
 
-    # Run synchronous checks
+    #检查数据库和opensearch
     _check_service("database", _check_database)
     _check_service("opensearch", _check_opensearch)
 
-    # Handle Ollama async check separately
+    #异步检查Ollama
     try:
         ollama_client = OllamaClient(settings)
         ollama_health = await ollama_client.health_check()

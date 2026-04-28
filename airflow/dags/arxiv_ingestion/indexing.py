@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
@@ -9,9 +8,9 @@ from src.services.opensearch.factory import make_opensearch_client_fresh
 
 logger = logging.getLogger(__name__)
 
-
+#论文转成字典格式，分块 + 生成向量 + 批量写入 OpenSearch。
 async def _index_papers_with_chunks(papers):
-    """Async helper to index papers with chunking and embeddings."""
+    """异步辅助函数：对论文进行分块、生成向量并建立索引"""
     indexing_service = make_hybrid_indexing_service()
 
     papers_data = []
@@ -36,15 +35,16 @@ async def _index_papers_with_chunks(papers):
 
     return stats
 
-
+#从数据库读取最近的论文，自动分块、生成向量、建立混合检索索引，供 RAG 系统搜索使用。
 def index_papers_hybrid(**context):
-    """Index papers with chunking and vector embeddings for hybrid search.
+    """
+    对论文进行分块与向量嵌入索引，用于混合检索。
 
-    This task:
-    1. Fetches recently processed papers from PostgreSQL
-    2. Chunks them into overlapping segments (600 words, 100 overlap)
-    3. Generates embeddings using Jina AI
-    4. Indexes chunks with embeddings into OpenSearch
+    任务流程：
+    1. 从 PostgreSQL 读取最近处理好的论文
+    2. 将论文分块（600词，重叠100词）
+    3. 使用 Jina AI 生成向量嵌入
+    4. 将分块与向量存入 OpenSearch 建立索引
     """
     try:
         database = make_database()
@@ -89,9 +89,9 @@ def index_papers_hybrid(**context):
         logger.error(f"Failed to index papers for hybrid search: {e}")
         raise
 
-
+#检查 OpenSearch 索引是否健康，统计总分块数、论文数、索引大小，用于监控和日志。
 def verify_hybrid_index(**context):
-    """Verify hybrid index health and get statistics."""
+    """检查混合索引状态是否健康，并获取统计信息"""
     try:
         opensearch_client = make_opensearch_client_fresh()
 

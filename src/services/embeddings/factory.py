@@ -1,23 +1,15 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 from typing import Optional
 
 from src.config import Settings, get_settings
 
 from .jina_client import JinaEmbeddingsClient
 
-
+#从配置里读取 Jina API Key 和地址，
+#自动创建并返回一个可用的 JinaEmbeddingsClient 向量客户端。
 def make_embeddings_service(settings: Optional[Settings] = None) -> JinaEmbeddingsClient:
-    """Factory function to create embeddings service.
-
-    Creates a new client instance each time to avoid closed client issues.
-
-    :param settings: Optional settings instance
-    :returns: JinaEmbeddingsClient instance
-    """
     if settings is None:
         settings = get_settings()
 
-    # Get API key from settings
     api_key = settings.jina_api_key
     base_url = settings.jina_base_url
 
@@ -25,17 +17,9 @@ def make_embeddings_service(settings: Optional[Settings] = None) -> JinaEmbeddin
 
 
 def make_embeddings_client(settings: Optional[Settings] = None) -> JinaEmbeddingsClient:
-    """Factory function to create embeddings client.
-
-    Creates a new client instance each time to avoid closed client issues.
-
-    :param settings: Optional settings instance
-    :returns: JinaEmbeddingsClient instance
-    """
     if settings is None:
         settings = get_settings()
 
-    # Get API key from settings
     api_key = settings.jina_api_key
     base_url = settings.jina_base_url
 

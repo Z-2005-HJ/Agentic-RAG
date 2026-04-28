@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 import logging
 
 from fastapi import APIRouter, HTTPException
@@ -8,15 +7,15 @@ from src.schemas.api.search import HybridSearchRequest, SearchHit, SearchRespons
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/hybrid-search", tags=["hybrid-search"])
+#创建路由
 
-
+#混合检索接口：支持关键词搜索 + 向量搜索，
+# 自动生成向量，自动降级，返回格式化的论文检索结果。
 @router.post("/", response_model=SearchResponse)
 async def hybrid_search(
     request: HybridSearchRequest, opensearch_client: OpenSearchDep, embeddings_service: EmbeddingsDep
 ) -> SearchResponse:
-    """
-    Hybrid search endpoint supporting multiple search modes.
-    """
+#接收参数：用户请求、搜索客户端、向量服务，返回SearchResponse
     try:
         if not opensearch_client.health_check():
             raise HTTPException(status_code=503, detail="Search service is currently unavailable")

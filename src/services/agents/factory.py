@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 from typing import Optional
 
 from src.services.embeddings.jina_client import JinaEmbeddingsClient
@@ -19,20 +18,18 @@ def make_agentic_rag_service(
     use_hybrid: bool = True,
 ) -> AgenticRAGService:
     """
-    Create AgenticRAGService with dependency injection.
+    创建智能体 RAG 服务（通过依赖注入）
 
-    Args:
-        opensearch_client: Client for document search
-        ollama_client: Client for LLM generation
-        embeddings_client: Client for embeddings
-        langfuse_tracer: Optional Langfuse tracer for observability
-        top_k: Number of documents to retrieve (default: 3)
-        use_hybrid: Use hybrid search (default: True)
+    opensearch_client: 文档检索客户端
+    ollama_client: 大模型生成客户端
+    embeddings_client: 向量生成客户端
+    langfuse_tracer: 可选的链路追踪器
+    top_k: 检索返回的文档数量
+    use_hybrid: 是否使用混合检索
 
-    Returns:
-        Configured AgenticRAGService instance
+    返回: 已配置完成的智能体 RAG 服务实例
     """
-    # Create graph configuration with the provided parameters
+    # 使用传入参数创建执行图配置
     graph_config = GraphConfig(
         top_k=top_k,
         use_hybrid=use_hybrid,

@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 import logging
 
 import redis
@@ -7,9 +6,8 @@ from src.services.cache.client import CacheClient
 
 logger = logging.getLogger(__name__)
 
-
+#创建原生 Redis 连接
 def make_redis_client(settings: Settings) -> redis.Redis:
-    """Create Redis client with connection pooling."""
     redis_settings = settings.redis
 
     try:
@@ -25,7 +23,6 @@ def make_redis_client(settings: Settings) -> redis.Redis:
             retry_on_error=[redis.ConnectionError, redis.TimeoutError],
         )
 
-        # Test connection
         client.ping()
         logger.info(f"Connected to Redis at {redis_settings.host}:{redis_settings.port}")
         return client
@@ -37,9 +34,8 @@ def make_redis_client(settings: Settings) -> redis.Redis:
         logger.error(f"Unexpected error creating Redis client: {e}")
         raise
 
-
+#基于Redis连接，创建业务用的缓存客户端CacheClient
 def make_cache_client(settings: Settings) -> CacheClient:
-    """Create exact match cache client."""
     try:
         redis_client = make_redis_client(settings)
         cache_client = CacheClient(redis_client, settings.redis)

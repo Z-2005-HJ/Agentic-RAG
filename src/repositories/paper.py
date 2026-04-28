@@ -1,4 +1,13 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+论文数据库操作仓储类
+create：接收 PaperCreate对象，转换成数据库模型并插入新论文记录。
+upsert：最常用的写入方法。根据arxiv_id判断：不存在则创建，已存在则更新，避免重复数据。
+基础查询：get_by_arxiv_id、get_by_id、get_all（分页查询，按发布日期倒序）、get_count（统计总数量）
+按处理状态筛选：get_processed_papers、get_unprocessed_papers、get_papers_with_raw_text（已成功提取文本的论文）
+统计数据：get_processing_stats，返回论文总数、已处理PDF数量、已提取文本数量、处理率、文本提取率
+更新数据：update：接收已修改的Paper对象，提交变更并刷新数据库状态
+'''
+
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
@@ -12,6 +21,8 @@ from src.schemas.arxiv.paper import PaperCreate
 class PaperRepository:
     def __init__(self, session: Session):
         self.session = session
+        #self.session是SQLAlchemy中的数据库会话（Session），
+        # 是数据库之间的临时对话通道，增删改查都由它来操作
 
     def create(self, paper: PaperCreate) -> Paper:
         db_paper = Paper(**paper.model_dump())
@@ -37,7 +48,6 @@ class PaperRepository:
         return self.session.scalar(stmt) or 0
 
     def get_processed_papers(self, limit: int = 100, offset: int = 0) -> List[Paper]:
-        """Get papers that have been successfully processed with PDF content."""
         stmt = (
             select(Paper)
             .where(Paper.pdf_processed == True)
@@ -48,24 +58,19 @@ class PaperRepository:
         return list(self.session.scalars(stmt))
 
     def get_unprocessed_papers(self, limit: int = 100, offset: int = 0) -> List[Paper]:
-        """Get papers that haven't been processed for PDF content yet."""
         stmt = select(Paper).where(Paper.pdf_processed == False).order_by(Paper.published_date.desc()).limit(limit).offset(offset)
         return list(self.session.scalars(stmt))
 
     def get_papers_with_raw_text(self, limit: int = 100, offset: int = 0) -> List[Paper]:
-        """Get papers that have raw text content stored."""
         stmt = select(Paper).where(Paper.raw_text != None).order_by(Paper.pdf_processing_date.desc()).limit(limit).offset(offset)
         return list(self.session.scalars(stmt))
 
     def get_processing_stats(self) -> dict:
-        """Get statistics about PDF processing status."""
         total_papers = self.get_count()
 
-        # Count processed papers
         processed_stmt = select(func.count(Paper.id)).where(Paper.pdf_processed == True)
         processed_papers = self.session.scalar(processed_stmt) or 0
 
-        # Count papers with text
         text_stmt = select(func.count(Paper.id)).where(Paper.raw_text != None)
         papers_with_text = self.session.scalar(text_stmt) or 0
 
@@ -84,13 +89,10 @@ class PaperRepository:
         return paper
 
     def upsert(self, paper_create: PaperCreate) -> Paper:
-        # Check if paper already exists
         existing_paper = self.get_by_arxiv_id(paper_create.arxiv_id)
         if existing_paper:
-            # Update existing paper with new content
             for key, value in paper_create.model_dump(exclude_unset=True).items():
                 setattr(existing_paper, key, value)
             return self.update(existing_paper)
         else:
-            # Create new paper
             return self.create(paper_create)

@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 from dataclasses import dataclass
 from langfuse._client.span import LangfuseSpan
 from typing import TYPE_CHECKING, Optional
@@ -11,21 +10,23 @@ from src.services.opensearch.client import OpenSearchClient
 
 @dataclass
 class Context:
-    """Runtime context for agent dependencies.
+    """
+    智能体运行时依赖的上下文对象
 
-    This contains immutable dependencies that nodes need but don't modify.
+    包含各个功能节点需要使用的、不可修改的依赖项
+    （所有客户端、配置、追踪器都在这里统一管理）
 
-    :param ollama_client: Client for LLM generation
-    :param opensearch_client: Client for document search
-    :param embeddings_client: Client for embeddings
-    :param langfuse_tracer: Optional tracer for observability
-    :param trace: Current Langfuse trace object (if enabled)
-    :param langfuse_enabled: Whether Langfuse tracing is enabled
-    :param model_name: Model to use for LLM calls
-    :param temperature: Temperature for generation
-    :param top_k: Number of documents to retrieve
-    :param max_retrieval_attempts: Maximum retrieval attempts
-    :param guardrail_threshold: Threshold for guardrail validation (0-100)
+    ollama_client: 大模型生成客户端
+    opensearch_client: 文档检索客户端
+    embeddings_client: 向量生成客户端
+    langfuse_tracer: 可选的链路追踪器（用于监控/可观测性）
+    trace: 当前的 Langfuse 追踪 Span 对象（开启追踪时有效）
+    langfuse_enabled: 是否启用 Langfuse 链路追踪
+    model_name: 大模型调用时使用的模型名称
+    temperature: 生成内容的温度参数（控制随机性）
+    top_k: 检索时返回的最大文档数量
+    max_retrieval_attempts: 最大重试检索次数
+    guardrail_threshold: 内容安全校验阈值（0-100）
     """
 
     ollama_client: OllamaClient

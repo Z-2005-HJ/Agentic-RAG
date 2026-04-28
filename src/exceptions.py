@@ -1,88 +1,86 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+给项目定义专用报错信息
+'''
+
 class RepositoryException(Exception):
-    """Base exception for repository-related errors."""
+    """仓库相关操作的基础异常类"""
 
 
 class PaperNotFound(RepositoryException):
-    """Exception raised when paper data is not found."""
+    """未找到论文数据时抛出"""
 
 
 class PaperNotSaved(RepositoryException):
-    """Exception raised when paper data is not saved."""
+    """论文数据保存失败时抛出"""
 
 
 class ParsingException(Exception):
-    """Base exception for parsing-related errors."""
+    """解析相关错误的基础异常类"""
 
 
-# Week 2: PDF parsing exceptions (implemented)
 class PDFParsingException(ParsingException):
-    """Base exception for PDF parsing-related errors."""
+    """PDF 解析相关错误的基础异常类"""
 
 
 class PDFValidationError(PDFParsingException):
-    """Exception raised when PDF file validation fails."""
+    """PDF 文件校验失败时抛出"""
 
 
 class PDFDownloadException(Exception):
-    """Base exception for PDF download-related errors."""
+    """PDF 下载相关错误的基础异常类"""
 
 
 class PDFDownloadTimeoutError(PDFDownloadException):
-    """Exception raised when PDF download times out."""
+    """PDF 下载超时抛出"""
 
 
 class PDFCacheException(Exception):
-    """Exception raised for PDF cache-related errors."""
+    """PDF 缓存相关错误抛出"""
 
 
-# Week 3+: OpenSearch exceptions (placeholders for Week 1)
 class OpenSearchException(Exception):
-    """Base exception for OpenSearch-related errors."""
+    """OpenSearch 相关错误的基础异常类"""
 
 
-# Week 2+: ArXiv API exceptions
 class ArxivAPIException(Exception):
-    """Base exception for arXiv API-related errors."""
+    """arXiv API 相关错误的基础异常类"""
 
 
 class ArxivAPITimeoutError(ArxivAPIException):
-    """Exception raised when arXiv API request times out."""
+    """arXiv API 请求超时抛出"""
 
 
 class ArxivAPIRateLimitError(ArxivAPIException):
-    """Exception raised when arXiv API rate limit is exceeded."""
+    """超出 arXiv API 请求频率限制时抛出"""
 
 
 class ArxivParseError(ArxivAPIException):
-    """Exception raised when arXiv API response parsing fails."""
+    """arXiv API 响应解析失败时抛出"""
 
 
-# Week 2+: Metadata fetching exceptions
 class MetadataFetchingException(Exception):
-    """Base exception for metadata fetching pipeline errors."""
+    """元数据获取流程错误的基础异常类"""
 
 
 class PipelineException(MetadataFetchingException):
-    """Exception raised during pipeline execution."""
+    """数据管道执行过程中出错抛出"""
 
 
 class LLMException(Exception):
-    """Base exception for LLM-related errors."""
+    """LLM 相关错误的基础异常类"""
 
 
 class OllamaException(LLMException):
-    """Exception raised for Ollama service errors."""
+    """Ollama 服务相关错误抛出"""
 
 
 class OllamaConnectionError(OllamaException):
-    """Exception raised when cannot connect to Ollama service."""
+    """无法连接 Ollama 服务时抛出"""
 
 
 class OllamaTimeoutError(OllamaException):
-    """Exception raised when Ollama service times out."""
+    """Ollama 服务请求超时抛出"""
 
 
-# General application exceptions
 class ConfigurationError(Exception):
-    """Exception raised when configuration is invalid."""
+    """配置无效或错误时抛出"""

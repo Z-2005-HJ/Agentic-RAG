@@ -1,4 +1,24 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+LangfuseTracer,Langfuse 追踪封装类,给 LangChain + LangGraph + 自定义 LLM / 检索流程
+提供全自动、无侵入、可关闭的日志监控、耗时统计、用户反馈、错误追踪能力。
+
+1.初始化，__init__，初始化 langfuse 客户端 self.client
+2.自动化链路追踪（对接 LangChain / LangGraph）
+    get_callback_handler，创建langfuse回调器，把LangChain/LangGraph 的所有调用都自动接入追踪
+    trace_langgraph_agent，内部调用 get_callback_handler，给整个智能体流程套上顶层追踪
+3.通用辅助工具方法
+    get_trace_id获取当前追踪ID
+    submit_feedback依赖 trace_id 提交评分反馈
+    flush强制把 Langfuse 客户端缓存的追踪数据立即上传到服务器，避免数据丢失。
+    shutdown服务退出前的安全收尾，先 flush() 刷完所有数据，再关闭客户端，保证日志完整。
+4.LLM 专用手动追踪（成对使用）
+     start_generation开启LLM追踪，监控各种数据
+     update_generation回填 LLM 的输出结果、Token 用量、耗时，然后自动结束本次追踪。
+5.通用业务步骤手动追踪（成对使用）
+    start_span非 LLM 的业务步骤（如检索、排序、工具调用）开启追踪，记录输入数据和配置。
+    update_span配合 start_span 使用，回填步骤的输出结果、元数据、错误信息，
+        支持设置日志级别和状态消息，然后自动结束追踪。
+'''
 import logging
 from contextlib import contextmanager
 from typing import Any, Dict, Optional
@@ -10,16 +30,13 @@ logger = logging.getLogger(__name__)
 
 
 class LangfuseTracer:
-    """Wrapper for Langfuse v3 tracing client with CallbackHandler support."""
-
     def __init__(self, settings: Settings):
         self.settings = settings.langfuse
         self.client: Optional[Langfuse] = None
 
         if self.settings.enabled and self.settings.public_key and self.settings.secret_key:
+        #判断是否要开启追踪，必须满足三个条件：enable配置里开启了追踪，有公钥和私钥
             try:
-                # Initialize Langfuse v3 singleton client
-                # Configuration moved to client initialization (not handler)
                 self.client = Langfuse(
                     public_key=self.settings.public_key,
                     secret_key=self.settings.secret_key,
@@ -28,6 +45,11 @@ class LangfuseTracer:
                     flush_interval=self.settings.flush_interval,
                     debug=self.settings.debug,
                 )
+                '''
+                创建langfuse客户端
+                host，langfuse服务的地址
+                flush_at缓存多少条数据后自动上传，interval上传间隔
+                '''
                 logger.info(f"Langfuse v3 tracing initialized (host: {self.settings.host})")
             except Exception as e:
                 logger.error(f"Failed to initialize Langfuse: {e}")
@@ -35,6 +57,8 @@ class LangfuseTracer:
         else:
             logger.info("Langfuse tracing disabled or missing credentials")
 
+    #用于创建并返回Langfuse回调处理器，
+    #让LangChain/LangGraph自动追踪并上传运行日志,未启用追踪时直接返回 None。
     def get_callback_handler(
         self,
         trace_name: Optional[str] = None,
@@ -43,30 +67,20 @@ class LangfuseTracer:
         metadata: Optional[Dict[str, Any]] = None,
         tags: Optional[list[str]] = None,
     ):
-        """
-        Get a CallbackHandler for LangChain/LangGraph integration.
-
-        This is the v3 recommended approach - all LLM calls are automatically traced.
-
-        Args:
-            trace_name: Optional name for the trace
-            user_id: Optional user identifier
-            session_id: Optional session identifier
-            metadata: Additional metadata to attach to the trace
-            tags: Optional tags for the trace
-
-        Returns:
-            CallbackHandler instance if Langfuse is enabled, None otherwise
-        """
+        '''
+        创建并返回一个langfuse回调处理器
+        trace_name：追踪名称
+        user_id：用户 ID
+        session_id：会话 ID
+        metadata：额外信息
+        tags：标签
+        '''
         if not self.client:
             return None
 
         try:
-            # Import v3 CallbackHandler (new path)
             from langfuse.langchain import CallbackHandler
 
-            # Create handler with trace metadata
-            # Note: flush settings are now on the client, not the handler
             handler = CallbackHandler(
                 trace_name=trace_name,
                 user_id=user_id,
@@ -79,7 +93,10 @@ class LangfuseTracer:
             logger.error(f"Error creating CallbackHandler: {e}")
             return None
 
+    # Python 装饰器，让这个函数可以用 with 语句调用，进入 / 退出上下文时自动执行逻辑。
     @contextmanager
+    #一个用于包裹 LangGraph 智能体执行流程的上下文管理器，
+    # 它会自动创建追踪处理器，让整个 Agent 运行过程被 Langfuse 监控记录。
     def trace_langgraph_agent(
         self,
         name: str,
@@ -88,34 +105,10 @@ class LangfuseTracer:
         metadata: Optional[Dict[str, Any]] = None,
         tags: Optional[list[str]] = None,
     ):
-        """
-        Context manager to wrap LangGraph agent execution with a top-level trace span.
-
-        This follows the Langfuse LangGraph cookbook pattern of wrapping the entire
-        graph invocation in a span for better observability.
-
-        Usage:
-            with tracer.trace_langgraph_agent(name="agentic_rag", ...) as (trace_ctx, handler):
-                result = graph.invoke(input, config={"callbacks": [handler]})
-                trace_ctx.update(output=result)
-
-        Args:
-            name: Name for the trace span (e.g., "agentic_rag_graph")
-            user_id: Optional user identifier
-            session_id: Optional session identifier
-            metadata: Additional metadata to attach
-            tags: Optional tags for the trace
-
-        Yields:
-            Tuple of (trace_context, callback_handler) for graph execution
-        """
         if not self.client:
-            # Return no-op context if Langfuse is disabled
             yield (None, None)
             return
 
-        # Create callback handler for LangChain/LangGraph integration
-        # The handler will automatically create traces
         handler = self.get_callback_handler(
             trace_name=name,
             user_id=user_id,
@@ -124,35 +117,22 @@ class LangfuseTracer:
             tags=tags,
         )
 
-        # In Langfuse v3, the CallbackHandler manages tracing automatically
-        # We just need to return the handler and a placeholder trace context
-        # The actual trace will be created by the handler
         yield (None, handler)
 
+    #获取当前正在执行的 Trace 的 ID
     def get_trace_id(self, trace=None) -> Optional[str]:
-        """
-        Get the current trace ID from Langfuse context.
-
-        In Langfuse v3, the CallbackHandler manages traces automatically.
-        We can get the current trace ID using get_current_trace_id().
-
-        Args:
-            trace: Deprecated, not used in v3
-
-        Returns:
-            Trace ID string or None if trace is disabled
-        """
         if not self.client:
             return None
 
         try:
-            # In Langfuse v3, use get_current_trace_id()
             trace_id = self.client.get_current_trace_id()
             return trace_id
         except Exception as e:
             logger.error(f"Error getting trace ID: {e}")
             return None
 
+    #向 Langfuse 提交用户对某次回答的评分反馈，
+    # 需要传入 trace_id 和评分，成功记录后返回 True，追踪未启用或失败则返回 False。
     def submit_feedback(
         self,
         trace_id: str,
@@ -160,18 +140,6 @@ class LangfuseTracer:
         name: str = "user-feedback",
         comment: Optional[str] = None,
     ) -> bool:
-        """
-        Submit user feedback for a trace (following Langfuse cookbook pattern).
-
-        Args:
-            trace_id: Trace ID from get_trace_id()
-            score: Feedback score (0-1 or -1 to 1)
-            name: Name of the score (default: "user-feedback")
-            comment: Optional feedback comment
-
-        Returns:
-            True if feedback was submitted successfully, False otherwise
-        """
         if not self.client:
             logger.warning("Cannot submit feedback: Langfuse is disabled")
             return False
@@ -189,16 +157,16 @@ class LangfuseTracer:
             logger.error(f"Error submitting feedback: {e}")
             return False
 
+    #强制将 Langfuse 客户端中缓存的追踪数据立即上传到服务器。
     def flush(self):
-        """Flush any pending traces."""
         if self.client:
             try:
                 self.client.flush()
             except Exception as e:
                 logger.error(f"Error flushing Langfuse: {e}")
 
+    #关闭 Langfuse 客户端，先 flush() 再 shutdown()
     def shutdown(self):
-        """Shutdown the Langfuse client."""
         if self.client:
             try:
                 self.client.flush()
@@ -206,6 +174,8 @@ class LangfuseTracer:
             except Exception as e:
                 logger.error(f"Error shutting down Langfuse: {e}")
 
+    #上下文管理器，用于为 LLM 调用创建 Langfuse 的 generation span，
+    # 专门追踪模型名称、输入、token 用量和耗时等关键信息，方便后续分析和调试。
     @contextmanager
     def start_generation(
         self,
@@ -214,32 +184,7 @@ class LangfuseTracer:
         input_data: Any,
         metadata: Optional[Dict[str, Any]] = None,
     ):
-        """
-        Start a generation span for LLM calls (following Langfuse cookbook pattern).
-
-        This creates a generation observation that tracks:
-        - Model name and parameters
-        - Input prompt/messages
-        - Output completion
-        - Token usage
-        - Latency
-
-        Usage:
-            with tracer.start_generation(name="decision_llm", model="llama3.2", input_data=prompt) as gen:
-                response = await llm.generate(...)
-                gen.update(output=response, usage_metadata={...})
-
-        Args:
-            name: Name for this generation (e.g., "decision_llm", "grading_llm")
-            model: Model identifier (e.g., "llama3.2:1b", "gpt-4o")
-            input_data: Input to the LLM (prompt or messages)
-            metadata: Additional metadata (temperature, max_tokens, etc.)
-
-        Yields:
-            Generation context object for updates
-        """
         if not self.client:
-            # No-op context when disabled
             yield None
             return
 
@@ -255,6 +200,8 @@ class LangfuseTracer:
             logger.error(f"Error creating generation span: {e}")
             yield None
 
+    #上下文管理器，用于为非LLM的通用业务步骤（如检索、工具调用）创建Langfuse追踪节点，
+    # 方便记录执行耗时、输入输出和状态。
     @contextmanager
     def start_span(
         self,
@@ -262,30 +209,7 @@ class LangfuseTracer:
         input_data: Optional[Any] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ):
-        """
-        Start a generic span for non-LLM operations (following Langfuse cookbook pattern).
-
-        Use this for operations like:
-        - Document retrieval
-        - Query rewriting logic
-        - Document grading logic
-        - Any other processing step
-
-        Usage:
-            with tracer.start_span(name="retrieve_papers", input_data={"query": q}) as span:
-                docs = retrieve(...)
-                span.update(output={"docs_count": len(docs)})
-
-        Args:
-            name: Name for this span (e.g., "retrieve_papers", "grade_documents")
-            input_data: Input to this operation
-            metadata: Additional metadata
-
-        Yields:
-            Span context object for updates
-        """
         if not self.client:
-            # No-op context when disabled
             yield None
             return
 
@@ -300,6 +224,7 @@ class LangfuseTracer:
             logger.error(f"Error creating span: {e}")
             yield None
 
+    #给 LLM 模型调用的追踪记录补充结果、token 用量和耗时，然后自动结束本次追踪。
     def update_generation(
         self,
         generation,
@@ -307,19 +232,6 @@ class LangfuseTracer:
         usage_metadata: Optional[Dict[str, Any]] = None,
         completion_start_time: Optional[float] = None,
     ):
-        """
-        Update a generation span with output and usage metrics.
-
-        Args:
-            generation: Generation object from start_generation()
-            output: LLM output/response
-            usage_metadata: Token usage and timing info
-                - prompt_tokens: int
-                - completion_tokens: int
-                - total_tokens: int
-                - latency_ms: float
-            completion_start_time: Optional start time for latency calculation
-        """
         if not generation:
             return
 
@@ -327,7 +239,6 @@ class LangfuseTracer:
             update_data = {"output": output}
 
             if usage_metadata:
-                # Add usage metadata following Langfuse format
                 if "prompt_tokens" in usage_metadata:
                     update_data["usage"] = {
                         "input": usage_metadata.get("prompt_tokens", 0),
@@ -335,7 +246,6 @@ class LangfuseTracer:
                         "total": usage_metadata.get("total_tokens", 0),
                     }
 
-                # Add timing metadata
                 if "latency_ms" in usage_metadata:
                     update_data["metadata"] = update_data.get("metadata", {})
                     update_data["metadata"]["latency_ms"] = usage_metadata["latency_ms"]
@@ -345,6 +255,7 @@ class LangfuseTracer:
         except Exception as e:
             logger.error(f"Error updating generation: {e}")
 
+    #给普通追踪节点（span）补充输出结果、元数据、日志级别和状态信息，然后自动结束这条追踪。
     def update_span(
         self,
         span,
@@ -353,16 +264,6 @@ class LangfuseTracer:
         level: Optional[str] = None,
         status_message: Optional[str] = None,
     ):
-        """
-        Update a span with output and metadata.
-
-        Args:
-            span: Span object from start_span()
-            output: Operation output
-            metadata: Additional metadata to attach
-            level: Log level (e.g., "ERROR", "WARNING") for error tracking
-            status_message: Status or error message
-        """
         if not span:
             return
 

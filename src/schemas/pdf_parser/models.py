@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -6,35 +5,29 @@ from pydantic import BaseModel, Field
 
 
 class ParserType(str, Enum):
-    """PDF parser types."""
-
+#选择解析器，用docling这个库来解析PDF
     DOCLING = "docling"
 
-
 class PaperSection(BaseModel):
-    """Represents a section of a paper."""
-
+#章节模型，把PDF解析出来的文本，按章节结构化存储
     title: str = Field(..., description="Section title")
     content: str = Field(..., description="Section content")
     level: int = Field(default=1, description="Section hierarchy level")
 
-
 class PaperFigure(BaseModel):
-    """Represents a figure in a paper."""
-
+#图片模型，用来描述论文里的图片、图表
     caption: str = Field(..., description="Figure caption")
     id: str = Field(..., description="Figure identifier")
 
 
 class PaperTable(BaseModel):
-    """Represents a table in a paper."""
-
+#表格模型
     caption: str = Field(..., description="Table caption")
     id: str = Field(..., description="Table identifier")
 
 
 class PdfContent(BaseModel):
-    """PDF-specific content extracted by parsers like Docling."""
+#前面的内容会被存储在这里
 
     sections: List[PaperSection] = Field(default_factory=list, description="Paper sections")
     figures: List[PaperFigure] = Field(default_factory=list, description="Figures")
@@ -46,7 +39,7 @@ class PdfContent(BaseModel):
 
 
 class ArxivMetadata(BaseModel):
-    """Paper metadata from arXiv API."""
+#arxiv元数据
 
     title: str = Field(..., description="Paper title from arXiv")
     authors: List[str] = Field(..., description="Authors from arXiv")
@@ -58,7 +51,7 @@ class ArxivMetadata(BaseModel):
 
 
 class ParsedPaper(BaseModel):
-    """Complete paper data combining arXiv metadata and PDF content."""
+#完整的论文数据模型
 
     arxiv_metadata: ArxivMetadata = Field(..., description="Metadata from arXiv API")
     pdf_content: Optional[PdfContent] = Field(None, description="Content extracted from PDF")

@@ -1,22 +1,24 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；本文件若含中文，均为补充释义而非替换原文。
+'''
+论文搜索功能的全套API数据格式规范
+统一前后端搜索接口的规范
+定义前端怎么发起搜索，定义后端返回什么结果，自动校验+自动生成接口文档
+'''
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-
+#普通搜索请求体
+#普通搜索的前端请求格式
 class SearchRequest(BaseModel):
-    """Search request model."""
-
     query: str = Field(..., min_length=1, max_length=500, description="Search query across title, abstract, and authors")
     size: int = Field(default=10, ge=1, le=50, description="Number of results to return")
     from_: int = Field(default=0, ge=0, alias="from", description="Offset for pagination")
     categories: Optional[List[str]] = Field(default=None, description="Filter by categories")
     latest_papers: bool = Field(default=False, description="Sort by publication date (newest first) instead of relevance")
 
-
+#混合搜索请求体
+#混合搜索的前端请求格式
 class HybridSearchRequest(BaseModel):
-    """Request model for hybrid search supporting all search modes."""
-
     query: str = Field(..., description="Search query text", min_length=1, max_length=500)
     size: int = Field(10, description="Number of results to return", ge=1, le=100)
     from_: int = Field(0, description="Offset for pagination", ge=0, alias="from")
@@ -37,10 +39,8 @@ class HybridSearchRequest(BaseModel):
             }
         }
 
-
+#单条搜索结果，返回一条论文结果
 class SearchHit(BaseModel):
-    """Individual search result."""
-
     arxiv_id: str
     title: str
     authors: Optional[str]
@@ -50,15 +50,12 @@ class SearchHit(BaseModel):
     score: float
     highlights: Optional[dict] = None
 
-    # Chunk-specific fields (for unified search)
     chunk_text: Optional[str] = Field(None, description="Text content of the matching chunk")
     chunk_id: Optional[str] = Field(None, description="Unique identifier of the chunk")
     section_name: Optional[str] = Field(None, description="Section name where the chunk was found")
 
-
+#搜索接口最终返回，整个搜索接口返回的最外层结构
 class SearchResponse(BaseModel):
-    """Search response model."""
-
     query: str
     total: int
     hits: List[SearchHit]
