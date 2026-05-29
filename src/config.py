@@ -190,19 +190,6 @@ class RedisSettings(BaseConfigSettings):
     ttl_hours: int = 6  #6小时自动删除
 
 
-class TelegramSettings(BaseConfigSettings):
-    model_config = SettingsConfigDict(
-        env_file=[".env", str(ENV_FILE_PATH)],
-        env_prefix="TELEGRAM__",
-        extra="ignore",
-        frozen=True,
-        case_sensitive=False,
-    )
-
-    bot_token: str = ""
-    enabled: bool = False
-
-
 class Settings(BaseConfigSettings):
     app_version: str = "0.1.0"
     debug: bool = True
@@ -221,6 +208,7 @@ class Settings(BaseConfigSettings):
 
     jina_api_key: str = ""
     jina_base_url: str = "https://api.jina.ai/v1"
+    use_hybrid_search: bool = True
 
     arxiv: ArxivSettings = Field(default_factory=ArxivSettings)
     pdf_parser: PDFParserSettings = Field(default_factory=PDFParserSettings)
@@ -228,7 +216,6 @@ class Settings(BaseConfigSettings):
     opensearch: OpenSearchSettings = Field(default_factory=OpenSearchSettings)
     langfuse: LangfuseSettings = Field(default_factory=LangfuseSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)
-    telegram: TelegramSettings = Field(default_factory=TelegramSettings)
 
     @field_validator("postgres_database_url")
     @classmethod

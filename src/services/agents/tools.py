@@ -35,9 +35,11 @@ def create_retriever_tool(
         logger.info(f"Retrieving papers for query: {query[:100]}...")
         logger.debug(f"Search mode: {'hybrid' if use_hybrid else 'bm25'}, top_k: {top_k}")
 
-        logger.debug("Generating query embedding")
-        query_embedding = await embeddings_client.embed_query(query)
-        logger.debug(f"Generated embedding with {len(query_embedding)} dimensions")
+        query_embedding = None
+        if use_hybrid:
+            logger.debug("Generating query embedding")
+            query_embedding = await embeddings_client.embed_query(query)
+            logger.debug(f"Generated embedding with {len(query_embedding)} dimensions")
 
         logger.debug("Searching OpenSearch")
         search_results = opensearch_client.search_unified(

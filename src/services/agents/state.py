@@ -5,7 +5,7 @@ from langgraph.graph.message import add_messages
 
 from .models import GradingResult, GuardrailScoring, RoutingDecision, SourceItem, ToolArtefact
 
-#只能RAG系统的记忆/状态记录本，数据、中间结果、思考过程都存在这里
+#智能RAG系统的记忆/状态记录本，数据、中间结果、思考过程都存在这里
 class AgentState(TypedDict):
     """
     智能体 RAG 工作流的状态类

@@ -25,7 +25,7 @@ class CacheClient:
         self.settings = settings
         self.ttl = timedelta(hours=settings.ttl_hours)
 
-    #根据用户的提问参数，生成一个唯一、固定、不可重复的Redis缓存Key，用力啊标记这一次问答的缓存
+    #根据用户的提问参数，生成一个唯一、固定、不可重复的Redis缓存Key，用来标记这一次问答的缓存
     def _generate_cache_key(self, request: AskRequest) -> str:
         key_data = {
             "query": request.query,

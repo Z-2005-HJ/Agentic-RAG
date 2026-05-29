@@ -4,10 +4,10 @@ QueryBuilder这个类就是你给他：搜索词、分页、分类、是否最�
 init：如果你要搜片段，则优先去正文搜，要是你要搜论文，则优先搜标题
 总入口build()包含所有查询组件，
 1._build_query()
-  _build_text_query()文本搜索：生成文本匹配条件，决定哪些文档和用户的搜索词相关。
-  _build_filters()分类过滤：生成过滤条件，筛选出符合要求的文档
+  _build_text_query()文本搜索：根据用户输入的搜索串，拼出OpenSearch里用于「全文匹配」的那一段查询子句
+  _build_filters()分类过滤：如果输入了category类别，就生成过滤条件，筛选出符合要求的文档
 2._build_source_fields()控制返回字段：看你要搜chunk还是搜论文
-3._build_highlight()关键词highlight
+3._build_highlight()给找到的关键词highlight，加上一个颜色
 4._build_sort()结果排序：如果输入了搜索词，不按时间排序按相关性排序，如果没输入，按时间排序
 '''
 

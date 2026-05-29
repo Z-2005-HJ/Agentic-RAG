@@ -1,10 +1,10 @@
 '''
 1.health_check检查是否能连上Opensearch、get_index_stats查看索引里有多少数据
 2.setup_indices(force=True/False)系统初始化
-    调用 _create_hybrid_index：创建存储论文分块的表
-    调用 _create_rrf_pipeline：创建混合搜索结果融合器
+    调用 _create_hybrid_index：创建存储论文分块的表（这里调用ARXIV_PAPERS_CHUNKS_MAPPING）
+    调用 _create_rrf_pipeline：创建混合搜索结果融合器（这里调用HYBRID_RRF_PIPELINE）
 3.搜索：
-search_papers调用_search_bm25_only只用BM25搜索
+search_papers调用_search_bm25_only只用BM25搜索（这里调用QueryBuilder）
 search_chunks_vector只用向量搜索
 search_chunks_hybrid调用_search_hybrid_native执行混合搜索
 search_unified调用_search_bm25_only、_search_hybrid_native对外的统一搜索入口

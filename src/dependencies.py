@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import TYPE_CHECKING, Annotated, Generator, Optional
+from typing import TYPE_CHECKING, Annotated, Generator
 
 if TYPE_CHECKING:
     from fastapi import Depends, Request
@@ -20,7 +20,6 @@ from src.services.langfuse.client import LangfuseTracer
 from src.services.ollama.client import OllamaClient
 from src.services.opensearch.client import OpenSearchClient
 from src.services.pdf_parser.parser import PDFParserService
-from src.services.telegram.bot import TelegramBot
 from src.services.agents.agentic_rag import AgenticRAGService
 from src.services.agents.factory import make_agentic_rag_service
 
@@ -68,10 +67,6 @@ def get_cache_client(request: Request) -> CacheClient | None:
     return getattr(request.app.state, "cache_client", None)
 
 
-def get_telegram_service(request: Request) -> Optional[TelegramBot]:
-    return getattr(request.app.state, "telegram_service", None)
-
-
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 DatabaseDep = Annotated[BaseDatabase, Depends(get_database)]
 SessionDep = Annotated[Session, Depends(get_db_session)]
@@ -82,7 +77,6 @@ EmbeddingsDep = Annotated[JinaEmbeddingsClient, Depends(get_embeddings_service)]
 OllamaDep = Annotated[OllamaClient, Depends(get_ollama_client)]
 LangfuseDep = Annotated[LangfuseTracer, Depends(get_langfuse_tracer)]
 CacheDep = Annotated[CacheClient | None, Depends(get_cache_client)]
-TelegramDep = Annotated[Optional[TelegramBot], Depends(get_telegram_service)]
 
 
 def get_agentic_rag_service(
@@ -97,6 +91,7 @@ def get_agentic_rag_service(
         ollama_client=ollama,
         embeddings_client=embeddings,
         langfuse_tracer=langfuse,
+        use_hybrid=settings.use_hybrid_search,
     )
 
 

@@ -409,7 +409,7 @@ class TextChunker:
             paper_id=paper_id,
         )
 
-    #大章节切割器，当一个章节太长是，先用普通滑动分块切开，再给每一小块都加上标题+摘要头部，保证每一块都有完整上下文
+    #大章节切割器，当一个章节太长时，先用普通滑动分块切开，再给每一小块都加上标题+摘要头部，保证每一块都有完整上下文
     def _split_large_section(
         self, full_section_text: str, header: str, section_title: str, base_chunk_index: int, arxiv_id: str, paper_id: str
     ) -> List[TextChunk]:

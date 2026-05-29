@@ -29,7 +29,6 @@ services:
       - LANGFUSE_HOST=http://langfuse-web:3000 
       - LANGFUSE_DEBUG=true
       - REDIS__HOST=redis
-      - TELEGRAM__ENABLED=false
     networks:
       - rag-network
 

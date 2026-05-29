@@ -52,21 +52,21 @@ By the end of this course, you'll have your own AI research assistant and the de
 - **Week 4:** Intelligent chunking + hybrid search combining keywords with semantic understanding
 - **Week 5:** Complete RAG pipeline with local LLM, streaming responses, and Gradio interface
 - **Week 6:** Production monitoring with Langfuse tracing and Redis caching for optimized performance
-- **Week 7:** **Agentic RAG with LangGraph and Telegram Bot for mobile access**
+- **Week 7:** **Agentic RAG with LangGraph**
 
-> **中文 · 每周交付：** **第 1 周** Docker / FastAPI / PostgreSQL / OpenSearch / Airflow 全套基础设施；**第 2 周** 自动化拉取并解析 arXiv 论文；**第 3 周** 生产级 BM25 与过滤、相关性；**第 4 周** 智能分块 + 关键词与语义混合检索；**第 5 周** 完整 RAG（本地 LLM、流式、Gradio）；**第 6 周** Langfuse 追踪与 Redis 缓存；**第 7 周** LangGraph **智能体 RAG** 与 **Telegram 机器人**。
+> **中文 · 每周交付：** **第 1 周** Docker / FastAPI / PostgreSQL / OpenSearch / Airflow 全套基础设施；**第 2 周** 自动化拉取并解析 arXiv 论文；**第 3 周** 生产级 BM25 与过滤、相关性；**第 4 周** 智能分块 + 关键词与语义混合检索；**第 5 周** 完整 RAG（本地 LLM、流式、Gradio）；**第 6 周** Langfuse 追踪与 Redis 缓存；**第 7 周** LangGraph **智能体 RAG**。
 
 ---
 
 ## 🏗️ System Architecture Evolution
 
-> **中文：** 以下为系统架构随课程推进的演进示意（以第 7 周 Agentic RAG + Telegram 为主）。
+> **中文：** 以下为系统架构随课程推进的演进示意（以第 7 周 Agentic RAG 为主）。
 
-### Week 7: Agentic RAG & Telegram Bot Integration
+### Week 7: Agentic RAG Integration
 <div align="center">
-  <img src="static/week7_telegram_and_agentic_ai.png" alt="Week 7 Telegram and Agentic AI Architecture" width="800">
-  <p><em>Complete Week 7 architecture showing Telegram bot integration with the agentic RAG system</em></p>
-  <p><strong>中文：</strong><em>第 7 周完整架构：Telegram 与智能体 RAG 集成示意。</em></p>
+  <img src="static/week7_telegram_and_agentic_ai.png" alt="Week 7 Agentic RAG Architecture" width="800">
+  <p><em>Complete Week 7 architecture showing the agentic RAG system</em></p>
+  <p><strong>中文：</strong><em>第 7 周完整架构：智能体 RAG 集成示意。</em></p>
 </div>
 
 ### LangGraph Agentic RAG Workflow
@@ -86,10 +86,10 @@ By the end of this course, you'll have your own AI research assistant and the de
 - **Document Grading**: Automatic relevance assessment with semantic evaluation
 - **Query Rewriting**: Adaptive query refinement when results are insufficient
 - **Guardrails**: Out-of-domain detection prevents hallucination
-- **Mobile Access**: Telegram bot for conversational AI on any device
+- **HTTP API**: `POST /api/v1/ask-agentic` for agentic Q&A with reasoning steps
 - **Transparency**: Full reasoning step tracking for debugging and trust
 
-> **中文 · 第 7 周要点：** **智能决策**（评估并调整检索策略）、**文档打分**（语义相关性）、**查询改写**（结果不足时自动优化）、**护栏**（域外检测防幻觉）、**移动端**（Telegram 对话）、**可解释**（完整推理步骤便于调试与信任）。
+> **中文 · 第 7 周要点：** **智能决策**（评估并调整检索策略）、**文档打分**（语义相关性）、**查询改写**（结果不足时自动优化）、**护栏**（域外检测防幻觉）、**可解释**（完整推理步骤便于调试与信任）。
 
 ---
 
@@ -139,7 +139,7 @@ curl http://localhost:8000/api/v1/health
 | **Week 4** | **Chunking & Hybrid Search** | [The Chunking Strategy That Makes Hybrid Search Work](https://jamwithai.substack.com/p/chunking-strategies-and-hybrid-rag) | [week4.0](https://github.com/jamwithai/arxiv-paper-curator/releases/tag/week4.0) |
 | **Week 5** | **Complete RAG system** | [The Complete RAG System](https://jamwithai.substack.com/p/the-complete-rag-system) | [week5.0](https://github.com/jamwithai/arxiv-paper-curator/releases/tag/week5.0) |
 | **Week 6** | **Production monitoring & caching** | [Production-ready RAG: Monitoring & Caching](https://jamwithai.substack.com/p/production-ready-rag-monitoring-and) | [week6.0](https://github.com/jamwithai/arxiv-paper-curator/releases/tag/week6.0) |
-| **Week 7** | **Agentic RAG & Telegram Bot** | [Agentic RAG with LangGraph and Telegram](https://jamwithai.substack.com/p/agentic-rag-with-langgraph-and-telegram) | [week7.0](https://github.com/jamwithai/arxiv-paper-curator/releases/tag/week7.0) |
+| **Week 7** | **Agentic RAG** | [Agentic RAG with LangGraph and Telegram](https://jamwithai.substack.com/p/agentic-rag-with-langgraph-and-telegram) | [week7.0](https://github.com/jamwithai/arxiv-paper-curator/releases/tag/week7.0) |
 
 > **中文 · 学习路径表：** 各周主题、博客与对应 **GitHub 发布标签（weekx.0）** 见上表；可按标签检出历史周代码。
 
@@ -206,16 +206,14 @@ docker compose up --build -d
 
 > **中文 · 组件与端口：** FastAPI **8000**、PostgreSQL **5432**、OpenSearch **9200/5601**、Airflow **8080**、Ollama **11434**。
 
-### **📓 Setup Guide**
+### **验证**
 
 ```bash
-# Launch the Week 1 notebook
-uv run jupyter notebook notebooks/week1/week1_setup.ipynb
+docker compose up -d
+curl http://localhost:8000/api/v1/health
 ```
 
-**Completion Guide:** Follow the [Week 1 notebook](notebooks/week1/week1_setup.ipynb) for hands-on setup and verification steps.
-
-> **中文：** 运行第 1 周 notebook，按步骤完成环境与验证。
+> **中文：** 启动 Compose 后检查健康接口与 Swagger `http://localhost:8000/docs`。
 
 ### **📖 Deep Dive**
 **Blog Post:** [The Infrastructure That Powers RAG Systems](https://jamwithai.substack.com/p/the-infrastructure-that-powers-rag) - Detailed walkthrough and production insights
@@ -254,16 +252,14 @@ uv run jupyter notebook notebooks/week1/week1_setup.ipynb
 
 > **中文 · 流水线组件：** **MetadataFetcher** 编排、**ArxivClient** 拉取、**PDFParserService**（Docling）、**Airflow DAG**、**PostgreSQL** 存储。
 
-### **📓 Implementation Guide**
+### **验证**
 
 ```bash
-# Launch the Week 2 notebook  
-uv run jupyter notebook notebooks/week2/week2_arxiv_integration.ipynb
+# 触发离线入库 DAG（Airflow UI http://localhost:8080）
+docker compose exec airflow airflow dags trigger arxiv_paper_ingestion
 ```
 
-**Completion Guide:** Follow the [Week 2 notebook](notebooks/week2/week2_arxiv_integration.ipynb) for hands-on implementation and verification steps.
-
-> **中文：** 打开第 2 周 notebook 完成实现与验证。
+> **中文：** 离线流水线见 `docs/Airflow.md`；DAG 在 `airflow/dags/arxiv_paper_ingestion.py`。
 
 ### **📖 Deep Dive**
 **Blog Post:** [Building Data Ingestion Pipelines for RAG](https://jamwithai.substack.com/p/bringing-your-rag-system-to-life) - arXiv API integration and PDF processing
@@ -297,21 +293,18 @@ uv run jupyter notebook notebooks/week2/week2_arxiv_integration.ipynb
 **Search Infrastructure Components:**
 - **OpenSearch Service**: `src/services/opensearch/` - Professional search service implementation
 - **Search API**: `src/routers/search.py` - Search API endpoints with BM25 scoring
-- **Learning Materials**: `notebooks/week3/` - Complete OpenSearch integration guide
 - **Quality Metrics**: Precision, recall, and relevance scoring
 
-> **中文 · 代码与材料：** OpenSearch 服务在 `src/services/opensearch/`；检索相关路由以项目实际代码为准（如 hybrid/ask 等）；notebook 在 `notebooks/week3/`；关注精确率、召回率与相关性。
+> **中文 · 代码：** OpenSearch 在 `src/services/opensearch/`；检索路由含 `hybrid_search`、`ask` 等。
 
-### **📓 Setup Guide**
+### **验证**
 
 ```bash
-# Launch the Week 3 notebook
-uv run jupyter notebook notebooks/week3/week3_opensearch.ipynb
+curl http://localhost:9200/_cluster/health
+curl -X POST http://localhost:8000/api/v1/hybrid-search/ -H "Content-Type: application/json" -d "{\"query\":\"transformer\",\"size\":5}"
 ```
 
-**Completion Guide:** Follow the [Week 3 notebook](notebooks/week3/week3_opensearch.ipynb) for hands-on OpenSearch setup and BM25 search implementation.
-
-> **中文：** 按第 3 周 notebook 完成 OpenSearch 与 BM25 实践。
+> **中文：** 确认 OpenSearch 健康后试混合检索 API。
 
 ### **📖 Deep Dive**
 **Blog Post:** [The Search Foundation Every RAG System Needs](https://jamwithai.substack.com/p/the-search-foundation-every-rag-system) - Complete BM25 implementation with OpenSearch
@@ -345,20 +338,12 @@ uv run jupyter notebook notebooks/week3/week3_opensearch.ipynb
 - **Text Chunker**: `src/services/indexing/text_chunker.py` - Section-aware chunking with overlap strategies
 - **Embeddings Service**: `src/services/embeddings/` - Production embedding pipeline with Jina AI
 - **Hybrid Search API**: `src/routers/hybrid_search.py` - Unified search API supporting all modes
-- **Learning Materials**: `notebooks/week4/` - Complete hybrid search implementation guide
 
-> **中文 · 组件：** 分块 `text_chunker.py`、嵌入 `embeddings/`、混合检索 API `hybrid_search.py`、notebook `notebooks/week4/`。
+> **中文 · 组件：** 分块 `text_chunker.py`、嵌入 `embeddings/`、混合检索 `hybrid_search.py`、离线索引 `hybrid_indexer.py`。
 
-### **📓 Setup Guide**
+### **验证**
 
-```bash
-# Launch the Week 4 notebook
-uv run jupyter notebook notebooks/week4/week4_hybrid_search.ipynb
-```
-
-**Completion Guide:** Follow the [Week 4 notebook](notebooks/week4/week4_hybrid_search.ipynb) for hands-on implementation and verification steps.
-
-> **中文：** 跟随第 4 周 notebook 完成混合检索实践。
+先跑通 Week 2 索引 DAG，再调用 `POST /api/v1/hybrid-search/`（`use_hybrid: true` 需配置 `JINA_API_KEY`）。
 
 ### **📖 Deep Dive**
 **Blog Post:** [The Chunking Strategy That Makes Hybrid Search Work](https://jamwithai.substack.com/p/chunking-strategies-and-hybrid-rag) - Production chunking and RRF fusion implementation
@@ -397,20 +382,15 @@ uv run jupyter notebook notebooks/week4/week4_hybrid_search.ipynb
 
 > **中文 · 组件：** 问答路由 `ask.py`、Ollama `services/ollama/`、系统提示词 `prompts/rag_system.txt`、Gradio `gradio_app.py`、启动脚本 `gradio_launcher.py`（**7861**）。
 
-### **📓 Setup Guide**
+### **验证**
 
 ```bash
-# Launch the Week 5 notebook
-uv run jupyter notebook notebooks/week5/week5_complete_rag_system.ipynb
-
-# Launch Gradio interface
+curl -X POST http://localhost:8000/api/v1/ask -H "Content-Type: application/json" -d "{\"query\":\"What are transformers?\",\"top_k\":3}"
 uv run python gradio_launcher.py
-# Open http://localhost:7861
+# 浏览器打开 http://localhost:7861
 ```
 
-**Completion Guide:** Follow the [Week 5 notebook](notebooks/week5/week5_complete_rag_system.ipynb) for hands-on LLM integration and RAG pipeline implementation.
-
-> **中文：** 运行 notebook；另开终端执行 `gradio_launcher.py`，浏览器打开 **7861**。
+> **中文：** 用 `/ask` 或 Gradio 验证完整 RAG；流程说明见 `docs/RAG-modes.md`。
 
 ### **📖 Deep Dive**
 **Blog Post:** [The Complete RAG System](https://jamwithai.substack.com/p/the-complete-rag-system) - Complete RAG system with local LLM integration and optimization techniques
@@ -445,20 +425,12 @@ uv run python gradio_launcher.py
 - **Cache Service**: `src/services/cache/` - Redis client with exact-match caching and graceful fallback
 - **Updated Endpoints**: `src/routers/ask.py` - Integrated tracing and caching middleware
 - **Docker Config**: `docker-compose.yml` - Added Redis service and Langfuse local instance
-- **Learning Materials**: `notebooks/week6/` - Complete monitoring and caching implementation guide
 
-> **中文 · 组件：** Langfuse `services/langfuse/`、缓存 `services/cache/`、路由中集成追踪与缓存；Compose 中 Redis/Langfuse；材料见 `notebooks/week6/`。（文中 `docker-compose.yml` 指 Compose 配置，本仓库多为 `compose.yml`。）
+> **中文 · 组件：** Langfuse `services/langfuse/`、缓存 `services/cache/`、路由集成；Compose 含 Redis/Langfuse（`compose.yml`）。
 
-### **📓 Setup Guide**
+### **验证**
 
-```bash
-# Launch the Week 6 notebook
-uv run jupyter notebook notebooks/week6/week6_cache_testing.ipynb
-```
-
-**Completion Guide:** Follow the [Week 6 notebook](notebooks/week6/week6_cache_testing.ipynb) for hands-on Langfuse tracing and Redis caching implementation.
-
-> **中文：** 按第 6 周 notebook 实践 Langfuse 与 Redis。
+同一问题连续请求两次 `/api/v1/ask`，第二次应命中 Redis；可在 Langfuse UI（`http://localhost:3000`）查看 trace。
 
 ### **📖 Deep Dive**
 **Blog Post:** [Production-ready RAG: Monitoring & Caching](https://jamwithai.substack.com/p/production-ready-rag-monitoring-and) - Production-ready RAG with monitoring and caching
@@ -467,11 +439,11 @@ uv run jupyter notebook notebooks/week6/week6_cache_testing.ipynb
 
 ---
 
-## 📚 Week 7: Agentic RAG with LangGraph and Telegram Bot
+## 📚 Week 7: Agentic RAG with LangGraph
 
-**Building on Week 6 production system:** Add intelligent reasoning, multi-step decision-making, and Telegram bot integration for mobile-first AI interactions.
+**Building on Week 6 production system:** Add intelligent reasoning, multi-step decision-making, and the `/api/v1/ask-agentic` endpoint.
 
-> **中文：** 在**第 6 周**生产系统上，加入**多步推理**、**决策编排**与 **Telegram**，偏移动优先交互。
+> **中文：** 在**第 6 周**生产系统上，加入**多步推理**、**决策编排**与 **Agentic 问答接口**。
 
 ### **🎯 Learning Objectives**
 - LangGraph workflows for state-based agent orchestration with decision nodes
@@ -479,39 +451,34 @@ uv run jupyter notebook notebooks/week6/week6_cache_testing.ipynb
 - Document grading with semantic relevance evaluation
 - Query rewriting for automatic query refinement and better retrieval
 - Adaptive retrieval with multi-attempt retrieval and intelligent fallback
-- Telegram bot integration with async operations and error handling
+- FastAPI `ask-agentic` and feedback endpoints with Langfuse tracing
 - Reasoning transparency by exposing agent decision-making process
 
-> **中文 · 学习目标：** LangGraph 状态机与工作流、护栏与域检测、文档打分、查询改写、自适应多轮检索、Telegram 异步与错误处理、暴露推理过程。
+> **中文 · 学习目标：** LangGraph 状态机与工作流、护栏与域检测、文档打分、查询改写、自适应多轮检索、暴露推理过程。
 
 ### **🏗️ Architecture Overview**
 
 <p align="center">
-  <img src="static/week7_telegram_and_agentic_ai.png" alt="Week 7 Agentic RAG & Telegram Architecture" width="900">
+  <img src="static/week7_telegram_and_agentic_ai.png" alt="Week 7 Agentic RAG Architecture" width="900">
 </p>
 
 **Agentic RAG Infrastructure Components:**
 - **Agent Nodes**: `src/services/agents/nodes/` - Guardrail, retrieve, grade, rewrite, and generate nodes
 - **Workflow Orchestration**: `src/services/agents/agentic_rag.py` - LangGraph workflow coordination
-- **Telegram Bot**: `src/services/telegram/` - Command handlers and message processing
 - **Agentic Endpoint**: `src/routers/agentic_ask.py` - Agentic RAG API endpoint
-- **Learning Materials**: `notebooks/week7/` - Week 7 learning materials and examples
 
-> **中文 · 组件：** 节点 `agents/nodes/`、编排 `agentic_rag.py`、Telegram `services/telegram/`、接口 `agentic_ask.py`、notebook `notebooks/week7/`。
+> **中文 · 组件：** 节点 `agents/nodes/`、编排 `agentic_rag.py`、接口 `agentic_ask.py`。
 
-### **📓 Setup Guide**
+### **验证**
 
 ```bash
-# Launch the Week 7 notebook
-uv run jupyter notebook notebooks/week7/week7_agentic_rag.ipynb
+curl -X POST http://localhost:8000/api/v1/ask-agentic -H "Content-Type: application/json" -d "{\"query\":\"What are attention mechanisms?\",\"top_k\":3}"
 ```
 
-**Completion Guide:** Follow the [Week 7 notebook](notebooks/week7/week7_agentic_rag.ipynb) for hands-on LangGraph agentic RAG and Telegram bot implementation.
-
-> **中文：** 按第 7 周 notebook 实践智能体 RAG 与 Telegram。
+> **中文：** 响应含 `reasoning_steps`、`retrieval_attempts`；详见 `docs/RAG-modes.md`。
 
 ### **📖 Deep Dive**
-**Blog Post:** [Agentic RAG with LangGraph and Telegram](https://jamwithai.substack.com/p/agentic-rag-with-langgraph-and-telegram) - Building intelligent agents with decision-making, adaptive retrieval, and mobile access
+**Blog Post:** [Agentic RAG with LangGraph and Telegram](https://jamwithai.substack.com/p/agentic-rag-with-langgraph-and-telegram) - Building intelligent agents with decision-making and adaptive retrieval
 
 > **中文 · 延伸阅读：** 决策、自适应检索与移动端。
 
@@ -527,10 +494,9 @@ cp .env.example .env
 
 **Key Variables:**
 - `JINA_API_KEY` - Required for Week 4+ (hybrid search with embeddings)
-- `TELEGRAM__BOT_TOKEN` - Required for Week 7 (Telegram bot integration)
 - `LANGFUSE__PUBLIC_KEY` & `LANGFUSE__SECRET_KEY` - Optional for Week 6 (monitoring)
 
-> **中文 · 配置要点：** 复制 `.env.example` 为 `.env`；**JINA_API_KEY** 第 4 周起混合检索必需；**TELEGRAM__BOT_TOKEN** 第 7 周机器人；**LANGFUSE** 密钥第 6 周可选（监控）。完整项见 [.env.example](.env.example)。
+> **中文 · 配置要点：** 复制 `.env.example` 为 `.env`；**JINA_API_KEY** 第 4 周起混合检索必需；**LANGFUSE** 密钥第 6 周可选（监控）。完整项见 [.env.example](.env.example)。
 
 **Complete Configuration:** See [.env.example](.env.example) for all available options and detailed documentation.
 
@@ -565,13 +531,13 @@ arxiv-paper-curator/
 │   ├── models/             # Database models (SQLAlchemy)
 │   ├── schemas/            # Pydantic validation schemas
 │   └── config.py           # Environment configuration
-├── notebooks/              # Weekly learning materials (week1-7)
+├── docs/                   # Project notes (e.g. Airflow, RAG modes)
 ├── airflow/                # Workflow orchestration (DAGs)
 ├── tests/                  # Test suite
 └── compose.yml             # Docker service orchestration
 ```
 
-> **中文 · 目录结构：** `src` 主程序；`notebooks` 每周教程；`airflow` DAG；`tests` 测试；`compose.yml` 编排容器。
+> **中文 · 目录结构：** `src` 主程序；`docs` 笔记；`airflow` DAG；`tests` 测试；`compose.yml` 编排容器。
 
 ### **📡 API Endpoints Reference**
 

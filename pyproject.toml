@@ -20,7 +20,6 @@ dependencies = [
     "gradio>=4.0.0",
     "langfuse>=3.0.0",
     "redis>=6.4.0",
-    "python-telegram-bot>=21.0,<22.0",
     "langgraph>=0.2.0",
     "langchain>=0.3.0",
     "langchain-core>=0.3.0",
@@ -54,7 +53,7 @@ viz = [
 
 [tool.ruff]
 line-length = 130
-exclude = ["notebooks/**", ".venv/**"]
+exclude = [".venv/**"]
 src = ["src", "tests"]
 lint.select = [
   "I",
