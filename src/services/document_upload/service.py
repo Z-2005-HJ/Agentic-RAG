@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class UploadDocumentService:
-    """Parse user-uploaded files into structured text for downstream ingest (stage 2)."""
+    """解析用户上传文件为结构化文本，供下游入库（阶段 2）。"""
 
     def __init__(self, pdf_parser: PDFParserService, upload_settings: UploadSettings):
         self.pdf_parser = pdf_parser
@@ -31,9 +31,9 @@ class UploadDocumentService:
         title_hint: Optional[str] = None,
     ) -> ParsedUploadDocument:
         """
-        Validate and parse an uploaded file.
+        校验并解析上传文件。
 
-        PDF uses Docling via PDFParserService; other formats use lightweight extractors in loader.py.
+        PDF 经 PDFParserService 走 Docling；其他格式使用 loader.py 中的轻量提取器。
         """
         validate_upload_file(file_path, self.settings)
 

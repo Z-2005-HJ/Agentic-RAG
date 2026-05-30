@@ -1,4 +1,4 @@
-"""Build citation/source URLs for arXiv papers and user-uploaded documents."""
+"""为 arXiv 论文与用户上传文档构建引用/来源 URL。"""
 
 
 def paper_source_url(arxiv_id: str) -> str:

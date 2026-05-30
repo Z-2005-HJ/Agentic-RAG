@@ -33,7 +33,7 @@ class OllamaClient:
         self.response_parser = ResponseParser()
 
     def get_langchain_model(self, model: str, temperature: float = 0.0) -> ChatOllama:
-        """Return a LangChain ChatOllama instance for agent graph nodes."""
+        """返回供 Agent 图节点使用的 LangChain ChatOllama 实例。"""
         return ChatOllama(
             model=model,
             temperature=temperature,

@@ -82,6 +82,26 @@ async def test_retriever_tool_custom_top_k(mock_opensearch_client, mock_embeddin
 
 
 @pytest.mark.asyncio
+async def test_retriever_tool_embedding_fallback(mock_opensearch_client, mock_embeddings_client):
+    """When embedding fails, Agentic retriever falls back to BM25 like standard /ask."""
+    mock_embeddings_client.embed_query = AsyncMock(side_effect=RuntimeError("embedding unavailable"))
+
+    tool = create_retriever_tool(
+        opensearch_client=mock_opensearch_client,
+        embeddings_client=mock_embeddings_client,
+        top_k=2,
+        use_hybrid=True,
+    )
+
+    result = await tool.ainvoke({"query": "machine learning"})
+
+    assert len(result) == 2
+    call_args = mock_opensearch_client.search_unified.call_args
+    assert call_args.kwargs["use_hybrid"] is False
+    assert result[0].metadata["search_mode"] == "bm25"
+
+
+@pytest.mark.asyncio
 async def test_retriever_tool_metadata_fields(mock_opensearch_client, mock_embeddings_client):
     """Test that all expected metadata fields are present."""
     from unittest.mock import Mock

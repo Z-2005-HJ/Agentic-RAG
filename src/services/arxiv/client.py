@@ -88,7 +88,7 @@ class ArxivClient:
         if from_date or to_date:
             date_from = f"{from_date}0000" if from_date else "*"
             date_to = f"{to_date}2359" if to_date else "*"
-            # Use correct arXiv API syntax with + symbols
+            # 使用 arXiv API 正确语法（+ 连接多个检索词）
             search_query += f" AND submittedDate:[{date_from}+TO+{date_to}]"
             #搜寻信息加上开始和截止时间
 
@@ -369,7 +369,7 @@ class ArxivClient:
                     raise PDFDownloadTimeoutError(f"PDF download timed out after {max_retries} attempts: {e}")
             except httpx.HTTPError as e:
                 if attempt < max_retries - 1:
-                    wait_time = self._settings.download_retry_delay_base * (attempt + 1)  # Exponential backoff
+                    wait_time = self._settings.download_retry_delay_base * (attempt + 1)  # 指数退避
                     logger.warning(f"Download failed (attempt {attempt + 1}/{max_retries}): {e}")
                     logger.info(f"Retrying in {wait_time}s...")
                     await asyncio.sleep(wait_time)

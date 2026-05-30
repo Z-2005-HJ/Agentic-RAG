@@ -37,17 +37,24 @@ def create_retriever_tool(
         logger.debug(f"Search mode: {'hybrid' if use_hybrid else 'bm25'}, top_k: {top_k}")
 
         query_embedding = None
+        search_mode = "bm25"
         if use_hybrid:
-            logger.debug("Generating query embedding")
-            query_embedding = await embeddings_client.embed_query(query)
-            logger.debug(f"Generated embedding with {len(query_embedding)} dimensions")
+            logger.debug("正在生成查询向量")
+            try:
+                query_embedding = await embeddings_client.embed_query(query)
+                search_mode = "hybrid"
+                logger.debug("向量维度: %s", len(query_embedding))
+            except Exception as exc:
+                logger.warning("向量生成失败，降级为 BM25 检索: %s", exc)
 
-        logger.debug("Searching OpenSearch")
+        effective_hybrid = use_hybrid and query_embedding is not None
+
+        logger.debug("正在检索 OpenSearch（模式=%s）", search_mode)
         search_results = opensearch_client.search_unified(
             query=query,
             query_embedding=query_embedding,
             size=top_k,
-            use_hybrid=use_hybrid,
+            use_hybrid=effective_hybrid,
         )
 
         documents = []
@@ -64,7 +71,7 @@ def create_retriever_tool(
                     "score": hit.get("score", 0.0),
                     "source": paper_source_url(hit.get("arxiv_id", "")),
                     "section": hit.get("section_name", ""),
-                    "search_mode": "hybrid" if use_hybrid else "bm25",
+                    "search_mode": search_mode,
                     "top_k": top_k,
                 },
             )

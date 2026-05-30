@@ -8,7 +8,7 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-# Configuration
+# 配置
 API_BASE_URL = "http://localhost:8000/api/v1"
 DEFAULT_MODEL = "llama3.2:1b"
 AVAILABLE_CATEGORIES = ["cs.AI", "cs.LG"]
@@ -18,15 +18,15 @@ UPLOAD_FILE_TYPES = [".pdf", ".txt", ".md", ".docx", ".xlsx", ".xls"]
 async def stream_response(
     query: str, top_k: int = 3, use_hybrid: bool = True, model: str = DEFAULT_MODEL, categories: str = ""
 ) -> Iterator[str]:
-    """Stream response from the RAG API"""
+    """从 RAG API 流式获取回答"""
     if not query.strip():
         yield "Please enter a question."
         return
 
-    # Parse categories
+    # 解析分类过滤
     category_list = [cat.strip() for cat in categories.split(",") if cat.strip()] if categories else None
 
-    # Prepare request payload
+    # 组装请求体
     payload = {"query": query, "top_k": top_k, "use_hybrid": use_hybrid, "model": model, "categories": category_list}
 
     try:
@@ -44,26 +44,26 @@ async def stream_response(
 
                 async for line in response.aiter_lines():
                     if line.startswith("data: "):
-                        data_str = line[6:]  # Remove "data: " prefix
+                        data_str = line[6:]  # 去掉 "data: " 前缀
                         try:
                             data = json.loads(data_str)
 
-                            # Handle error
+                            # 处理错误
                             if "error" in data:
                                 yield f"Error: {data['error']}"
                                 return
 
-                            # Handle metadata
+                            # 处理元数据（来源、检索模式等）
                             if "sources" in data:
                                 sources = data["sources"]
                                 chunks_used = data.get("chunks_used", 0)
                                 search_mode = data.get("search_mode", "unknown")
                                 continue
 
-                            # Handle streaming chunks
+                            # 处理流式文本块
                             if "chunk" in data:
                                 current_answer += data["chunk"]
-                                # Format response with sources if we have them
+                                # 若有来源信息则拼接到回答下方
                                 formatted_response = current_answer
                                 if sources or chunks_used:
                                     formatted_response += f"\n\n**Search Info:**\n"
@@ -71,20 +71,20 @@ async def stream_response(
                                     formatted_response += f"- Chunks used: {chunks_used}\n"
                                     if sources:
                                         formatted_response += f"- Sources: {len(sources)} papers\n"
-                                        for i, source in enumerate(sources[:3], 1):  # Show first 3 sources
+                                        for i, source in enumerate(sources[:3], 1):  # 只展示前 3 个来源
                                             formatted_response += f"  {i}. [{source.split('/')[-1]}]({source})\n"
                                         if len(sources) > 3:
                                             formatted_response += f"  ... and {len(sources) - 3} more\n"
 
                                 yield formatted_response
 
-                            # Handle completion
+                            # 处理流结束
                             if data.get("done", False):
                                 final_answer = data.get("answer", current_answer)
                                 if final_answer != current_answer:
                                     current_answer = final_answer
 
-                                # Final formatted response
+                                # 最终格式化输出
                                 formatted_response = current_answer
                                 if sources or chunks_used:
                                     formatted_response += f"\n\n**Search Info:**\n"
@@ -101,7 +101,7 @@ async def stream_response(
                                 break
 
                         except json.JSONDecodeError:
-                            continue  # Skip malformed JSON lines
+                            continue  # 跳过格式错误的 JSON 行
 
     except httpx.RequestError as e:
         yield f"Connection error: {str(e)}\nMake sure the API server is running at {API_BASE_URL}"
@@ -110,7 +110,7 @@ async def stream_response(
 
 
 async def upload_document(file_path: str | None, title: str = "") -> str:
-    """Upload a local file through the FastAPI ingest endpoint."""
+    """通过 FastAPI 上传接口将本地文件写入知识库。"""
     if not file_path:
         return "请先选择要上传的文件。"
 
@@ -152,7 +152,7 @@ async def upload_document(file_path: str | None, title: str = "") -> str:
 
 
 def create_gradio_interface():
-    """Create and configure the Gradio interface"""
+    """创建并配置 Gradio 界面"""
 
     with gr.Blocks(
         title="arXiv Paper Curator - RAG Chat",
@@ -284,16 +284,16 @@ def create_gradio_interface():
 
 
 def main():
-    """Main entry point for the Gradio app"""
+    """Gradio 应用入口"""
     print("🚀 Starting arXiv Paper Curator Gradio Interface...")
     print(f"📡 API Base URL: {API_BASE_URL}")
 
     interface = create_gradio_interface()
 
-    # Launch the interface
+    # 启动 Web 界面
     interface.launch(
         server_name="0.0.0.0",
-        server_port=7861,  # Changed to avoid port conflict
+        server_port=7861,  # 避免与默认 7860 端口冲突
         share=False,
         show_error=True,
         quiet=False,

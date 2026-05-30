@@ -72,7 +72,7 @@ async def ainvoke_guardrail_step(
         logger.info(f"Guardrail result - Score: {response.score}, Reason: {response.reason}")
 
         if span:
-            execution_time = (time.time() - start_time) * 1000  # Convert to ms
+            execution_time = (time.time() - start_time) * 1000  # 转为毫秒
             runtime.context.langfuse_tracer.end_span(
                 span,
                 output={

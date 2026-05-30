@@ -1,4 +1,4 @@
-"""Download BAAI/bge-small-zh-v1.5 to models/bge-small-zh-v1.5 for local embedding."""
+"""将 BAAI/bge-small-zh-v1.5 下载到 models/bge-small-zh-v1.5，供本地向量化使用。"""
 
 from __future__ import annotations
 

@@ -22,13 +22,13 @@ router = APIRouter(tags=["documents"])
 async def upload_document(
     session: SessionDep,
     ingest_service: UploadIngestDep,
-    file: UploadFile = File(..., description="Document file to ingest"),
-    title: Optional[str] = Form(None, description="Optional display title"),
+    file: UploadFile = File(..., description="待入库的文档文件"),
+    title: Optional[str] = Form(None, description="可选显示标题"),
 ) -> UploadResponse:
     """
-    Upload a document, store it in PostgreSQL, and index searchable chunks in OpenSearch.
+    上传文档：写入 PostgreSQL，并将可检索 chunk 索引到 OpenSearch。
 
-    Supported formats: PDF, TXT, Markdown, DOCX, XLSX, XLS.
+    支持格式：PDF、TXT、Markdown、DOCX、XLSX、XLS。
     """
     if not file.filename:
         raise HTTPException(status_code=400, detail="Uploaded file must include a filename")

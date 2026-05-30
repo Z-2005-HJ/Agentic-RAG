@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentUploadIngestService:
-    """Save uploaded files to PostgreSQL and index chunks in OpenSearch."""
+    """将上传文件保存到 PostgreSQL，并将 chunk 索引到 OpenSearch。"""
 
     def __init__(
         self,

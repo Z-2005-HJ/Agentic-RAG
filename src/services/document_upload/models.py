@@ -14,7 +14,7 @@ class UploadParserType(str, Enum):
 
 
 class ParsedUploadDocument(BaseModel):
-    """Structured output from parsing a user-uploaded file (stage 1 — no DB/OpenSearch yet)."""
+    """用户上传文件解析结果（阶段 1 — 尚未写入 DB/OpenSearch）。"""
 
     raw_text: str = Field(..., description="Full extracted plain text")
     sections: Optional[List[Dict[str, str]]] = Field(

@@ -1,4 +1,4 @@
-"""Local BGE embedding client (sentence-transformers)."""
+"""本地 BGE 向量客户端（基于 sentence-transformers）。"""
 
 import asyncio
 import logging

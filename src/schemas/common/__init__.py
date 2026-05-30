@@ -30,24 +30,24 @@ from src.schemas.pdf_parser.models import (
 from src.schemas.api.search import HybridSearchRequest
 
 __all__ = [
-    # API
+    # API 接口
     "HealthResponse",
     "ServiceStatus",
     "SearchRequest",
     "SearchResponse",
     "SearchHit",
-    # ArXiv
+    # arXiv 论文
     "ArxivPaper",
     "PaperBase",
     "PaperCreate",
     "PaperResponse",
     "PaperSearchResponse",
-    # Indexing
+    # 索引分块
     "ChunkMetadata",
     "TextChunk",
-    # Database
+    # 数据库
     "PostgreSQLSettings",
-    # PDF Parser
+    # PDF 解析
     "ParserType",
     "PaperSection",
     "PaperFigure",
@@ -55,6 +55,6 @@ __all__ = [
     "PdfContent",
     "ArxivMetadata",
     "ParsedPaper",
-    # Search
+    # 检索
     "HybridSearchRequest",
 ]

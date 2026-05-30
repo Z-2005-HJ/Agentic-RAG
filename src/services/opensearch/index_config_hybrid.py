@@ -9,7 +9,7 @@ ARXIV_PAPERS_CHUNKS_INDEX = "arxiv-papers-chunks"
 
 
 def build_hybrid_chunks_mapping(vector_dimension: int) -> dict:
-    """Build OpenSearch index body with the configured knn vector dimension."""
+    """根据配置的 knn 向量维度构建 OpenSearch 索引 body。"""
     return _hybrid_chunks_mapping_template(vector_dimension)
 
 
@@ -78,7 +78,7 @@ def _hybrid_chunks_mapping_template(vector_dimension: int) -> dict:
     }
 
 
-# Default mapping for BGE-small-zh-v1.5 (512 dimensions)
+# BGE-small-zh-v1.5 默认 mapping（512 维向量）
 ARXIV_PAPERS_CHUNKS_MAPPING = _hybrid_chunks_mapping_template(512)
 
 #把 BM25（关键词）和 KNN（向量）的结果，用 RRF 算法智能融合

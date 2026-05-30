@@ -6,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 from src.config import get_settings
 from src.db.factory import make_database
-from src.routers import agentic_ask, hybrid_search, ping, upload
+from src.routers import agentic_ask, hybrid_search, papers, ping, upload
 from src.routers.ask import ask_router, stream_router
 from src.services.arxiv.factory import make_arxiv_client
 from src.services.cache.factory import make_cache_client
@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
     opensearch_client = make_opensearch_client()
     app.state.opensearch_client = opensearch_client
 
-    # Verify OpenSearch connectivity and create index if needed  # 检查连通性并按需创建索引
+    # 检查 OpenSearch 连通性并按需创建索引
     if opensearch_client.health_check():
         logger.info("OpenSearch connected successfully")
 
@@ -58,14 +58,14 @@ async def lifespan(app: FastAPI):
                 expected_dimension,
             )
 
-        # Setup hybrid index (supports all search types)  # 创建/准备混合检索索引（覆盖多种检索模式）
+        # 创建/准备混合检索索引（支持 BM25 + 向量等多种检索模式）
         setup_results = opensearch_client.setup_indices(force=False)
         if setup_results.get("hybrid_index"):
             logger.info("Hybrid index created")
         else:
             logger.info("Hybrid index already exists")
 
-        # Get simple statistics  # 获取索引文档数量等简单统计
+        # 获取索引文档数量等简单统计
         try:
             stats = opensearch_client.client.count(index=opensearch_client.index_name)
             logger.info(f"OpenSearch ready: {stats['count']} documents indexed")
@@ -74,7 +74,7 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("OpenSearch connection failed - search features will be limited")
 
-    # Initialize other services (kept for future endpoints and notebook demos)  # 初始化其余服务（供接口与 notebook 演示）
+    # 初始化其余服务（供 API、Gradio 与 notebook 演示使用）
     app.state.arxiv_client = make_arxiv_client()
     app.state.pdf_parser = make_pdf_parser_service()
     app.state.embeddings_service = make_embeddings_service()
@@ -105,6 +105,7 @@ app.include_router(hybrid_search.router, prefix="/api/v1")  # BM25/混合检索�
 app.include_router(ask_router, prefix="/api/v1")  # 标准 RAG 问答
 app.include_router(stream_router, prefix="/api/v1")  # 流式 RAG
 app.include_router(upload.router, prefix="/api/v1")  # 用户文档上传
+app.include_router(papers.router, prefix="/api/v1")  # 全文浏览 / 文档元数据
 app.include_router(agentic_ask.router)  # LangGraph 智能体 RAG
 
 

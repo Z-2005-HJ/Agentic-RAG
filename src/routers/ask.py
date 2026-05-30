@@ -107,7 +107,7 @@ async def ask_question(
             #生成向量，以便于混合检索
             query_embedding = None
 
-            # Retrieve chunks
+            # 检索 chunk 片段
             chunks, sources, _ = await _prepare_chunks_and_sources(
                 request, opensearch_client, embeddings_service, rag_tracer, trace
             )

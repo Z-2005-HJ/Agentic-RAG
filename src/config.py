@@ -1,4 +1,4 @@
-# Bilingual comments policy
+# 注释策略：代码注释与 docstring 以中文为主，便于阅读维护
 import os
 from pathlib import Path
 from typing import List, Literal, Optional

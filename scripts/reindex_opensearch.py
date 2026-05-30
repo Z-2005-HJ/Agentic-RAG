@@ -1,11 +1,11 @@
 """
-Rebuild the OpenSearch chunk index for BGE embeddings and reindex all papers from PostgreSQL.
+为 BGE 向量重建 OpenSearch chunk 索引，并从 PostgreSQL 重新索引全部论文。
 
-Typical use after switching from Jina (1024d) to BGE (512d):
+从 Jina（1024 维）切换到 BGE（512 维）后典型用法：
 
     uv run python scripts/reindex_opensearch.py
     uv run python scripts/reindex_opensearch.py --flush-redis
-    uv run python scripts/reindex_opensearch.py --skip-recreate   # keep existing 512d index
+    uv run python scripts/reindex_opensearch.py --skip-recreate   # 保留已有 512 维索引
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
-# Allow `uv run python scripts/reindex_opensearch.py` from project root
+# 支持在项目根目录执行：uv run python scripts/reindex_opensearch.py
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))

@@ -49,8 +49,14 @@ FastAPI 收到 POST，读出 body 里的 JSON，校验并转成 **`AskRequest`**
 
 ### 为什么 Agentic 不用 Redis 整答缓存？
 
-1. **路径更长**：同一句 `query`，护栏、打分、是否改写、检索几次都会受模型输出影响，**重复性**不如标准 RAG 高，缓存命中率未必划算。
-2. **缓存键要一致**：标准问答的 key 已绑定多种参数；若 Agentic 以后也要缓存，通常还要把**图配置**（如护栏阈值、是否 hybrid 等）纳入 key，**更复杂**。
+当前实现：**仅标准 RAG（`/ask`、`/stream`）使用 Redis**；Agentic 路径未接入缓存。
+
+设计考量（详见 [`docs/cache.md`](cache.md)）：
+
+1. **实现范围**：项目阶段优先保证 Agentic 多步推理与 Langfuse 可观测；缓存为可选增强。
+2. **Key 规则**：若启用，可与标准 RAG 共用 `query + model + top_k + use_hybrid + categories`；扩展项可含 `graph_version`、`index_version`。
+3. **Exact match 限制**：问句改一字即不命中，对两种模式相同。
+4. **索引更新**：整答缓存可能在 TTL 内返回陈旧答案（标准 RAG 同样适用）。
 
 ---
 

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def validate_upload_file(file_path: Path, settings: UploadSettings) -> None:
-    """Validate file existence, extension whitelist, and size limit."""
+    """校验文件是否存在、扩展名白名单及大小限制。"""
     if not file_path.exists():
         raise UploadValidationError(f"File not found: {file_path}")
 
@@ -148,7 +148,7 @@ def extract_by_extension(
     settings: UploadSettings,
     title_hint: str | None = None,
 ) -> Tuple[str, UploadParserType, List[Dict[str, str]] | None, Dict[str, Any]]:
-    """Sync text extraction for non-PDF formats. PDF is handled via Docling in the service layer."""
+    """同步提取非 PDF 格式文本；PDF 由 service 层通过 Docling 处理。"""
     extension = file_path.suffix.lower()
     resolved_title = derive_title_hint(file_path, title_hint)
 
