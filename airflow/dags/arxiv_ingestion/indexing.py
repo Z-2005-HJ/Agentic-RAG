@@ -43,7 +43,7 @@ def index_papers_hybrid(**context):
     任务流程：
     1. 从 PostgreSQL 读取最近处理好的论文
     2. 将论文分块（600词，重叠100词）
-    3. 使用 Jina AI 生成向量嵌入
+    3. 使用本地 BGE 生成向量嵌入
     4. 将分块与向量存入 OpenSearch 建立索引
     """
     try:

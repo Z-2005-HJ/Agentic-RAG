@@ -84,3 +84,23 @@ class OllamaTimeoutError(OllamaException):
 
 class ConfigurationError(Exception):
     """配置无效或错误时抛出"""
+
+
+class UploadException(Exception):
+    """用户上传文档相关错误的基础异常类"""
+
+
+class UploadValidationError(UploadException):
+    """上传文件校验失败时抛出（格式、大小等）"""
+
+
+class UnsupportedUploadFormatError(UploadValidationError):
+    """不支持的文件扩展名时抛出"""
+
+
+class UploadFileTooLargeError(UploadValidationError):
+    """上传文件超过大小限制时抛出"""
+
+
+class UploadParsingException(ParsingException):
+    """上传文档解析失败或提取文本为空时抛出"""

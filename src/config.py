@@ -139,7 +139,7 @@ class OpenSearchSettings(BaseConfigSettings):
     #分块文本索引的后缀，和上面的主索引构成名字arxiv-papers-chunks
     max_text_size: int = 1000000
 
-    vector_dimension: int = 1024  #由jina的嵌入模型决定
+    vector_dimension: int = 512  # BAAI/bge-small-zh-v1.5
     vector_space_type: str = "cosinesimil"  #用余弦相似度检索
 
     rrf_pipeline_name: str = "hybrid-rrf-pipeline"
@@ -190,6 +190,84 @@ class RedisSettings(BaseConfigSettings):
     ttl_hours: int = 6  #6小时自动删除
 
 
+class UploadSettings(BaseConfigSettings):
+    model_config = SettingsConfigDict(
+        env_file=[".env", str(ENV_FILE_PATH)],
+        env_prefix="UPLOAD__",
+        extra="ignore",
+        frozen=True,
+        case_sensitive=False,
+    )
+
+    upload_dir: str = "./data/uploads"
+    max_file_size_mb: int = 50
+    allowed_extensions: List[str] = Field(
+        default_factory=lambda: [".pdf", ".txt", ".md", ".docx", ".xlsx", ".xls"]
+    )
+    excel_max_rows: int = 500
+    min_extracted_text_chars: int = 50
+
+    @field_validator("upload_dir")
+    @classmethod
+    def validate_upload_dir(cls, v: str) -> str:
+        os.makedirs(v, exist_ok=True)
+        return v
+
+    @field_validator("allowed_extensions", mode="before")
+    @classmethod
+    def parse_allowed_extensions(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+    @field_validator("allowed_extensions")
+    @classmethod
+    def normalize_extensions(cls, extensions: List[str]) -> List[str]:
+        normalized = []
+        for ext in extensions:
+            value = ext.strip().lower()
+            if not value:
+                continue
+            if not value.startswith("."):
+                value = f".{value}"
+            normalized.append(value)
+        if not normalized:
+            raise ValueError("allowed_extensions must contain at least one extension")
+        return normalized
+
+    def resolved_upload_dir(self) -> Path:
+        path = Path(self.upload_dir)
+        if not path.is_absolute():
+            path = PROJECT_ROOT / path
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def allowed_extension_set(self) -> set[str]:
+        return set(self.allowed_extensions)
+
+
+class EmbeddingsSettings(BaseConfigSettings):
+    model_config = SettingsConfigDict(
+        env_file=[".env", str(ENV_FILE_PATH)],
+        env_prefix="EMBEDDINGS__",
+        extra="ignore",
+        frozen=True,
+        case_sensitive=False,
+    )
+
+    model_name: str = "BAAI/bge-small-zh-v1.5"
+    model_path: str = "./models/bge-small-zh-v1.5"
+    device: Literal["cpu", "cuda", "mps"] = "cpu"
+    batch_size: int = 32
+    query_instruction: str = "为这个句子生成表示以用于检索相关文章："
+
+    def resolved_model_path(self) -> str:
+        path = Path(self.model_path)
+        if not path.is_absolute():
+            path = PROJECT_ROOT / path
+        return str(path)
+
+
 class Settings(BaseConfigSettings):
     app_version: str = "0.1.0"
     debug: bool = True
@@ -206,10 +284,10 @@ class Settings(BaseConfigSettings):
     ollama_model: str = "llama3.2:1b"
     ollama_timeout: int = 300
 
-    jina_api_key: str = ""
-    jina_base_url: str = "https://api.jina.ai/v1"
     use_hybrid_search: bool = True
 
+    embeddings: EmbeddingsSettings = Field(default_factory=EmbeddingsSettings)
+    upload: UploadSettings = Field(default_factory=UploadSettings)
     arxiv: ArxivSettings = Field(default_factory=ArxivSettings)
     pdf_parser: PDFParserSettings = Field(default_factory=PDFParserSettings)
     chunking: ChunkingSettings = Field(default_factory=ChunkingSettings)

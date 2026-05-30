@@ -1,7 +1,11 @@
 services:
   # FastAPI 应用（对外 API）
   api:
-    build: .
+    build:
+      context: .
+      args:
+        UV_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+        UV_REWRITE_HOSTED_PACKAGES: "true"
     container_name: rag-api
     ports:
       - "8000:8000"
@@ -29,6 +33,12 @@ services:
       - LANGFUSE_HOST=http://langfuse-web:3000 
       - LANGFUSE_DEBUG=true
       - REDIS__HOST=redis
+      - HF_ENDPOINT=${HF_ENDPOINT:-https://hf-mirror.com}
+      - EMBEDDINGS__MODEL_PATH=/app/models/bge-small-zh-v1.5
+      - UPLOAD__UPLOAD_DIR=/app/data/uploads
+    volumes:
+      - ./models:/app/models
+      - ./data/uploads:/app/data/uploads
     networks:
       - rag-network
 
@@ -128,13 +138,13 @@ services:
       - HF_ENDPOINT=${HF_ENDPOINT:-https://hf-mirror.com}
       - HF_HUB_DOWNLOAD_TIMEOUT=${HF_HUB_DOWNLOAD_TIMEOUT:-600}
       - HF_HUB_ETAG_TIMEOUT=${HF_HUB_ETAG_TIMEOUT:-120}
-      # Route Jina embedding requests through a host-side relay (keeps other outbound traffic direct).
-      - JINA_BASE_URL=${JINA_BASE_URL:-http://192.168.144.1:19090/v1}
+      - EMBEDDINGS__MODEL_PATH=/app/models/bge-small-zh-v1.5
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
       - ./src:/opt/airflow/src
+      - ./models:/app/models
     ports:
       - "8080:8080"
     # 启动命令由 airflow 镜像内 entrypoint.sh 处理

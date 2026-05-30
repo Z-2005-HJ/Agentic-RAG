@@ -114,7 +114,7 @@ cd arxiv-paper-curator
 cp .env.example .env
 # The .env file contains all necessary configuration for OpenSearch, 
 # arXiv API, and service connections. Defaults work out of the box.
-# You need to add Jina embeddings free api key and langfuse keys (check the blogs)
+# You need to download the BGE model locally (see docs/embeddings.md); Langfuse keys optional (Week 6)
 
 # 3. Install dependencies
 uv sync
@@ -126,7 +126,7 @@ docker compose up --build -d
 curl http://localhost:8000/api/v1/health
 ```
 
-> **中文 · 命令说明：** 1）克隆并进入目录；2）复制 `.env`（含 OpenSearch、arXiv 等配置，默认即可跑通；**第 4 周起**需 Jina 嵌入 API Key，**第 6 周**可选 Langfuse 密钥，详见博客）；3）`uv sync` 安装依赖；4）`docker compose` 启动服务；5）健康检查接口验证。
+> **中文 · 命令说明：** 1）克隆并进入目录；2）复制 `.env`（含 OpenSearch、arXiv 等配置，默认即可跑通；**第 4 周起**需下载本地 **BGE** 模型，**第 6 周**可选 Langfuse 密钥，详见 `docs/embeddings.md`）；3）`uv sync` 安装依赖；4）`docker compose` 启动服务；5）健康检查接口验证。
 
 ### **📚 Weekly Learning Path**
 
@@ -321,12 +321,12 @@ curl -X POST http://localhost:8000/api/v1/hybrid-search/ -H "Content-Type: appli
 
 ### **🎯 Learning Objectives**
 - Section-based chunking with intelligent document segmentation
-- Production embeddings with Jina AI integration and fallback strategies
+- Production embeddings with local BGE (512-d) and BM25-only fallback
 - Hybrid search mastery using RRF fusion for keyword + semantic retrieval
 - Unified API design with single endpoint supporting multiple search modes
 - Performance analysis and trade-offs between search approaches
 
-> **中文 · 学习目标：** 按章节分块、Jina 等嵌入与回退策略、RRF 融合混合检索、统一 API、性能与权衡分析。
+> **中文 · 学习目标：** 按章节分块、本地 BGE 嵌入与 BM25 回退、RRF 融合混合检索、统一 API、性能与权衡分析。
 
 ### **🏗️ Architecture Overview**
 
@@ -336,14 +336,14 @@ curl -X POST http://localhost:8000/api/v1/hybrid-search/ -H "Content-Type: appli
 
 **Hybrid Search Infrastructure Components:**
 - **Text Chunker**: `src/services/indexing/text_chunker.py` - Section-aware chunking with overlap strategies
-- **Embeddings Service**: `src/services/embeddings/` - Production embedding pipeline with Jina AI
+- **Embeddings Service**: `src/services/embeddings/` - Local BGE via sentence-transformers
 - **Hybrid Search API**: `src/routers/hybrid_search.py` - Unified search API supporting all modes
 
 > **中文 · 组件：** 分块 `text_chunker.py`、嵌入 `embeddings/`、混合检索 `hybrid_search.py`、离线索引 `hybrid_indexer.py`。
 
 ### **验证**
 
-先跑通 Week 2 索引 DAG，再调用 `POST /api/v1/hybrid-search/`（`use_hybrid: true` 需配置 `JINA_API_KEY`）。
+先下载 BGE 模型并跑通 Week 2 索引 DAG，再调用 `POST /api/v1/hybrid-search/`（`use_hybrid: true` 需 `./models/bge-small-zh-v1.5` 已就绪）。详见 [docs/embeddings.md](docs/embeddings.md)。
 
 ### **📖 Deep Dive**
 **Blog Post:** [The Chunking Strategy That Makes Hybrid Search Work](https://jamwithai.substack.com/p/chunking-strategies-and-hybrid-rag) - Production chunking and RRF fusion implementation
@@ -493,10 +493,11 @@ cp .env.example .env
 ```
 
 **Key Variables:**
-- `JINA_API_KEY` - Required for Week 4+ (hybrid search with embeddings)
+- `EMBEDDINGS__MODEL_PATH` - Local BGE model directory (default `./models/bge-small-zh-v1.5`)
+- `OPENSEARCH__VECTOR_DIMENSION` - Must match BGE (512 for `bge-small-zh-v1.5`)
 - `LANGFUSE__PUBLIC_KEY` & `LANGFUSE__SECRET_KEY` - Optional for Week 6 (monitoring)
 
-> **中文 · 配置要点：** 复制 `.env.example` 为 `.env`；**JINA_API_KEY** 第 4 周起混合检索必需；**LANGFUSE** 密钥第 6 周可选（监控）。完整项见 [.env.example](.env.example)。
+> **中文 · 配置要点：** 复制 `.env.example` 为 `.env`；**BGE 模型**第 4 周起混合检索必需（`uv run python scripts/download_bge_model.py`）；**LANGFUSE** 密钥第 6 周可选（监控）。完整项见 [.env.example](.env.example) 与 [docs/embeddings.md](docs/embeddings.md)。
 
 **Complete Configuration:** See [.env.example](.env.example) for all available options and detailed documentation.
 
@@ -512,7 +513,7 @@ cp .env.example .env
 | **PostgreSQL 16** | Paper metadata and content storage | ✅ Ready |
 | **OpenSearch 2.19** | Hybrid search engine (BM25 + Vector) | ✅ Ready |
 | **Apache Airflow 3.0** | Workflow automation | ✅ Ready |
-| **Jina AI** | Embedding generation (Week 4) | ✅ Ready |
+| **BGE (local)** | Embedding generation (Week 4) | ✅ Ready |
 | **Ollama** | Local LLM serving (Week 5) | ✅ Ready |
 | **Redis** | High-performance caching (Week 6) | ✅ Ready |
 | **Langfuse** | RAG pipeline observability (Week 6) | ✅ Ready |

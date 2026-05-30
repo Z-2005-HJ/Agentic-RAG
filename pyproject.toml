@@ -17,6 +17,8 @@ dependencies = [
     "docling>=2.43.0",
     "python-dateutil>=2.9.0.post0",
     "sentence-transformers>=5.1.0",
+    "torch==2.8.0",
+    "torchvision==0.23.0",
     "gradio>=4.0.0",
     "langfuse>=3.0.0",
     "redis>=6.4.0",
@@ -25,8 +27,21 @@ dependencies = [
     "langchain-core>=0.3.0",
     "langchain-community>=0.3.0",
     "langchain-ollama>=0.3.0",
+    "python-docx>=1.2.0",
+    "pandas>=2.3.2",
+    "openpyxl>=3.1.5",
 ]
 readme = "README.md"
+
+# Docker / 本地均使用 CPU 版 PyTorch，避免拉取 ~3GB NVIDIA CUDA 轮子（BGE 推理无需 GPU）。
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
 
 [dependency-groups]
 dev = [

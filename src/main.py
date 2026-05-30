@@ -6,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 from src.config import get_settings
 from src.db.factory import make_database
-from src.routers import agentic_ask, hybrid_search, ping
+from src.routers import agentic_ask, hybrid_search, ping, upload
 from src.routers.ask import ask_router, stream_router
 from src.services.arxiv.factory import make_arxiv_client
 from src.services.cache.factory import make_cache_client
@@ -46,6 +46,17 @@ async def lifespan(app: FastAPI):
     # Verify OpenSearch connectivity and create index if needed  # 检查连通性并按需创建索引
     if opensearch_client.health_check():
         logger.info("OpenSearch connected successfully")
+
+        existing_dimension = opensearch_client.get_index_embedding_dimension()
+        expected_dimension = settings.opensearch.vector_dimension
+        if existing_dimension is not None and existing_dimension != expected_dimension:
+            logger.warning(
+                "OpenSearch index %s has embedding dimension %s but config expects %s. "
+                "Run: uv run python scripts/reindex_opensearch.py",
+                opensearch_client.index_name,
+                existing_dimension,
+                expected_dimension,
+            )
 
         # Setup hybrid index (supports all search types)  # 创建/准备混合检索索引（覆盖多种检索模式）
         setup_results = opensearch_client.setup_indices(force=False)
@@ -93,6 +104,7 @@ app.include_router(ping.router, prefix="/api/v1")  # 健康检查
 app.include_router(hybrid_search.router, prefix="/api/v1")  # BM25/混合检索分块
 app.include_router(ask_router, prefix="/api/v1")  # 标准 RAG 问答
 app.include_router(stream_router, prefix="/api/v1")  # 流式 RAG
+app.include_router(upload.router, prefix="/api/v1")  # 用户文档上传
 app.include_router(agentic_ask.router)  # LangGraph 智能体 RAG
 
 

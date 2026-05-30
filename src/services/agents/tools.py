@@ -3,8 +3,9 @@ import logging
 from langchain_core.documents import Document
 from langchain_core.tools import tool
 
-from src.services.embeddings.jina_client import JinaEmbeddingsClient
+from src.services.embeddings import EmbeddingsClient
 from src.services.opensearch.client import OpenSearchClient
+from src.utils.document_sources import paper_source_url
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 #LangChain 工具（Tool），智能体看到问题需要查资料时，就会自动调用它。
 def create_retriever_tool(
     opensearch_client: OpenSearchClient,
-    embeddings_client: JinaEmbeddingsClient,
+    embeddings_client: EmbeddingsClient,
     top_k: int = 3,
     use_hybrid: bool = True,
 ):#作用：创建并返回一个可被智能体调用的 “论文检索工具”
@@ -61,7 +62,7 @@ def create_retriever_tool(
                     "title": hit.get("title", ""),
                     "authors": hit.get("authors", ""),
                     "score": hit.get("score", 0.0),
-                    "source": f"https://arxiv.org/pdf/{hit['arxiv_id']}.pdf",
+                    "source": paper_source_url(hit.get("arxiv_id", "")),
                     "section": hit.get("section_name", ""),
                     "search_mode": "hybrid" if use_hybrid else "bm25",
                     "top_k": top_k,

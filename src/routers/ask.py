@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 from src.dependencies import CacheDep, EmbeddingsDep, LangfuseDep, OllamaDep, OpenSearchDep
 from src.schemas.api.ask import AskRequest, AskResponse
 from src.services.langfuse.tracer import RAGTracer
+from src.utils.document_sources import paper_source_url
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +69,7 @@ async def _prepare_chunks_and_sources(
             #凭借论文PDF链接
             if arxiv_id:
                 arxiv_ids.append(arxiv_id)
-                arxiv_id_clean = arxiv_id.split("v")[0] if "v" in arxiv_id else arxiv_id
-                sources_set.add(f"https://arxiv.org/pdf/{arxiv_id_clean}.pdf")
+                sources_set.add(paper_source_url(arxiv_id))
 
         #结束监控追踪+返回结果
         rag_tracer.end_search(search_span, chunks, arxiv_ids, search_results.get("total", 0))

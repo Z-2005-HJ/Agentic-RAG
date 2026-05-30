@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 from opensearchpy import OpenSearch
 from src.config import Settings
 
-from .index_config_hybrid import  ARXIV_PAPERS_CHUNKS_MAPPING, HYBRID_RRF_PIPELINE
+from .index_config_hybrid import HYBRID_RRF_PIPELINE, build_hybrid_chunks_mapping
 from .query_builder import QueryBuilder
 
 logger = logging.getLogger(__name__)
@@ -79,6 +79,17 @@ class OpenSearchClient:
             logger.error(f"Error getting index stats: {e}")
             return {"index_name": self.index_name, "exists": False, "document_count": 0, "error": str(e)}
 
+    def get_index_embedding_dimension(self) -> Optional[int]:
+        try:
+            if not self.client.indices.exists(index=self.index_name):
+                return None
+            mapping = self.client.indices.get_mapping(index=self.index_name)
+            properties = mapping[self.index_name]["mappings"]["properties"]
+            return properties["embedding"]["dimension"]
+        except Exception as e:
+            logger.warning(f"Could not read embedding dimension for {self.index_name}: {e}")
+            return None
+
     def setup_indices(self, force: bool = False) -> Dict[str, bool]:
     #force表示要不要强制重建，如果为true，就会先删掉旧的再重建
         results = {}
@@ -93,8 +104,12 @@ class OpenSearchClient:
                 logger.info(f"Deleted existing hybrid index: {self.index_name}")
 
             if not self.client.indices.exists(index=self.index_name):
-                self.client.indices.create(index=self.index_name, body=ARXIV_PAPERS_CHUNKS_MAPPING)
-                logger.info(f"Created hybrid index: {self.index_name}")
+                index_body = build_hybrid_chunks_mapping(self.settings.opensearch.vector_dimension)
+                self.client.indices.create(index=self.index_name, body=index_body)
+                logger.info(
+                    f"Created hybrid index: {self.index_name} "
+                    f"(embedding dimension={self.settings.opensearch.vector_dimension})"
+                )
                 return True
 
             logger.info(f"Hybrid index already exists: {self.index_name}")

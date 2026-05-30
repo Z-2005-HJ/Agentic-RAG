@@ -1,0 +1,75 @@
+import logging
+from typing import Optional
+
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+
+from src.dependencies import SessionDep, UploadIngestDep
+from src.exceptions import (
+    UnsupportedUploadFormatError,
+    UploadFileTooLargeError,
+    UploadParsingException,
+    UploadValidationError,
+)
+from src.schemas.api.upload import UploadResponse
+from src.services.document_upload.models import UploadIngestStatus
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(tags=["documents"])
+
+
+@router.post("/documents/upload", response_model=UploadResponse)
+async def upload_document(
+    session: SessionDep,
+    ingest_service: UploadIngestDep,
+    file: UploadFile = File(..., description="Document file to ingest"),
+    title: Optional[str] = Form(None, description="Optional display title"),
+) -> UploadResponse:
+    """
+    Upload a document, store it in PostgreSQL, and index searchable chunks in OpenSearch.
+
+    Supported formats: PDF, TXT, Markdown, DOCX, XLSX, XLS.
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Uploaded file must include a filename")
+
+    try:
+        file_bytes = await file.read()
+        if not file_bytes:
+            raise HTTPException(status_code=422, detail="Uploaded file is empty")
+
+        result = await ingest_service.ingest_upload(
+            session=session,
+            file_bytes=file_bytes,
+            original_filename=file.filename,
+            title=title,
+        )
+
+        if result.status == UploadIngestStatus.FAILED:
+            raise HTTPException(status_code=422, detail=result.message or "Document ingest failed")
+
+        return UploadResponse(
+            document_id=result.document_id,
+            arxiv_id=result.arxiv_id,
+            title=result.title,
+            original_filename=result.original_filename,
+            chunks_created=result.chunks_created,
+            chunks_indexed=result.chunks_indexed,
+            embeddings_generated=result.embeddings_generated,
+            parser_used=result.parser_used,
+            status=result.status.value,
+            message=result.message,
+        )
+    except UnsupportedUploadFormatError as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+    except UploadFileTooLargeError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
+    except UploadParsingException as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except UploadValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Unexpected upload error: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Upload failed: {exc}") from exc

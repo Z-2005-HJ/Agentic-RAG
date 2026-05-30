@@ -40,3 +40,15 @@ def test_settings_ollama_defaults():
     # In Docker environment, this should be ollama service host
     expected_host = "http://ollama:11434" if "OLLAMA_HOST" not in os.environ else settings.ollama_host
     assert settings.ollama_host in ["http://localhost:11434", "http://ollama:11434"]
+
+
+def test_settings_upload_defaults():
+    """Test upload default configuration."""
+    settings = Settings()
+
+    assert settings.upload.max_file_size_mb == 50
+    assert ".pdf" in settings.upload.allowed_extension_set()
+    assert ".docx" in settings.upload.allowed_extension_set()
+    assert settings.upload.excel_max_rows == 500
+    assert settings.upload.min_extracted_text_chars == 50
+    assert settings.upload.resolved_upload_dir().exists()

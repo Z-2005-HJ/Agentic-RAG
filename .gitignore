@@ -171,8 +171,16 @@ opensearch_data/
 # Ollama
 ollama_data/
 
-# Data directories
-data/
+# Data directories (runtime PDFs/uploads ignored; keep uploads folder placeholder)
+data/*
+!data/uploads/
+data/uploads/*
+!data/uploads/.gitkeep
+
+# Local embedding model weights (download via scripts/download_bge_model.py)
+models/*
+!models/.gitkeep
+!models/README.md
 
 # Test files and output
 test_output/

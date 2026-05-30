@@ -89,7 +89,12 @@ class TestRetrieveNode:
         assert isinstance(result["messages"][0], AIMessage)
         # Check that message indicates failure to find papers
         content_lower = result["messages"][0].content.lower()
-        assert "apologize" in content_lower or "unable" in content_lower or "couldn't find" in content_lower
+        assert (
+            "apologize" in content_lower
+            or "unable" in content_lower
+            or "couldn't find" in content_lower
+            or "抱歉" in result["messages"][0].content
+        )
 
 
 class TestGradeDocumentsNode:

@@ -1,5 +1,6 @@
 import json
 import logging
+from pathlib import Path
 from typing import Iterator
 
 import gradio as gr
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 API_BASE_URL = "http://localhost:8000/api/v1"
 DEFAULT_MODEL = "llama3.2:1b"
 AVAILABLE_CATEGORIES = ["cs.AI", "cs.LG"]
+UPLOAD_FILE_TYPES = [".pdf", ".txt", ".md", ".docx", ".xlsx", ".xls"]
 
 
 async def stream_response(
@@ -107,6 +109,48 @@ async def stream_response(
         yield f"Unexpected error: {str(e)}"
 
 
+async def upload_document(file_path: str | None, title: str = "") -> str:
+    """Upload a local file through the FastAPI ingest endpoint."""
+    if not file_path:
+        return "请先选择要上传的文件。"
+
+    path = Path(file_path)
+    if not path.exists():
+        return f"文件不存在: {file_path}"
+
+    try:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            with path.open("rb") as file_handle:
+                files = {"file": (path.name, file_handle, "application/octet-stream")}
+                data = {"title": title.strip()} if title.strip() else {}
+                response = await client.post(f"{API_BASE_URL}/documents/upload", files=files, data=data)
+
+        if response.status_code != 200:
+            detail = response.text
+            try:
+                detail = response.json().get("detail", detail)
+            except Exception:
+                pass
+            return f"上传失败（HTTP {response.status_code}）: {detail}"
+
+        payload = response.json()
+        return (
+            f"**上传成功**\n\n"
+            f"- 标题: {payload.get('title')}\n"
+            f"- 文档 ID: `{payload.get('arxiv_id')}`\n"
+            f"- 解析器: {payload.get('parser_used')}\n"
+            f"- 分块数: {payload.get('chunks_created')}\n"
+            f"- 已索引: {payload.get('chunks_indexed')}\n"
+            f"- 状态: {payload.get('status')}\n"
+            f"- 说明: {payload.get('message', '无')}\n\n"
+            f"现在可以在「问答对话」里提问，系统会检索 arXiv 论文和刚上传的文档。"
+        )
+    except httpx.RequestError as exc:
+        return f"连接 API 失败: {exc}\n请确认 FastAPI 已在 http://localhost:8000 运行。"
+    except Exception as exc:
+        return f"上传过程中发生错误: {exc}"
+
+
 def create_gradio_interface():
     """Create and configure the Gradio interface"""
 
@@ -118,82 +162,112 @@ def create_gradio_interface():
             """
             # 🔬 arXiv Paper Curator - RAG Chat
             
-            Ask questions about machine learning and AI research papers from arXiv.
-            The system will search through indexed papers and provide answers with sources.
+            Ask questions about indexed arXiv papers and your uploaded documents.
             """
         )
 
-        with gr.Row():
-            with gr.Column(scale=3):
-                query_input = gr.Textbox(
-                    label="Your Question", placeholder="What are transformers in machine learning?", lines=2, max_lines=5
+        with gr.Tabs():
+            with gr.Tab("💬 问答对话"):
+                with gr.Row():
+                    with gr.Column(scale=3):
+                        query_input = gr.Textbox(
+                            label="Your Question",
+                            placeholder="What are transformers in machine learning?",
+                            lines=2,
+                            max_lines=5,
+                        )
+
+                    with gr.Column(scale=1):
+                        submit_btn = gr.Button("Ask Question", variant="primary", size="lg")
+
+                with gr.Row():
+                    with gr.Column():
+                        with gr.Accordion("Advanced Options", open=False):
+                            top_k = gr.Slider(
+                                minimum=1,
+                                maximum=10,
+                                value=3,
+                                step=1,
+                                label="Number of chunks to retrieve",
+                                info="More chunks = more context but slower generation",
+                            )
+
+                            use_hybrid = gr.Checkbox(
+                                value=True,
+                                label="Use hybrid search (BM25 + vector embeddings)",
+                                info="Usually better results than keyword-only search",
+                            )
+
+                            model_choice = gr.Dropdown(
+                                choices=["llama3.2:1b", "llama3.2:3b", "llama3.1:8b", "qwen2.5:7b"],
+                                value=DEFAULT_MODEL,
+                                label="LLM Model",
+                                info="Larger models may give better answers but are slower",
+                            )
+
+                            categories = gr.Textbox(
+                                label="arXiv Categories (optional)",
+                                placeholder="cs.AI, cs.LG, cs.CL",
+                                info="Comma-separated. Leave empty for all categories",
+                            )
+
+                response_output = gr.Markdown(
+                    label="Answer",
+                    value="Ask a question to get started!",
+                    height=400,
+                    elem_classes=["response-markdown"],
                 )
 
-            with gr.Column(scale=1):
-                submit_btn = gr.Button("Ask Question", variant="primary", size="lg")
+                gr.Examples(
+                    examples=[
+                        ["What are transformers in machine learning?", 3, True, "llama3.2:1b", "cs.AI, cs.LG"],
+                        ["How do convolutional neural networks work?", 5, True, "llama3.2:1b", "cs.CV, cs.LG"],
+                        ["What is attention mechanism in deep learning?", 4, False, "llama3.2:1b", "cs.AI"],
+                        ["Explain reinforcement learning algorithms", 3, True, "llama3.2:1b", "cs.LG, cs.AI"],
+                        ["What are the latest developments in NLP?", 5, True, "llama3.2:1b", "cs.CL"],
+                    ],
+                    inputs=[query_input, top_k, use_hybrid, model_choice, categories],
+                )
 
-        with gr.Row():
-            with gr.Column():
-                with gr.Accordion("Advanced Options", open=False):
-                    top_k = gr.Slider(
-                        minimum=1,
-                        maximum=10,
-                        value=3,
-                        step=1,
-                        label="Number of chunks to retrieve",
-                        info="More chunks = more context but slower generation",
-                    )
+                submit_btn.click(
+                    fn=stream_response,
+                    inputs=[query_input, top_k, use_hybrid, model_choice, categories],
+                    outputs=[response_output],
+                    show_progress=True,
+                )
 
-                    use_hybrid = gr.Checkbox(
-                        value=True,
-                        label="Use hybrid search (BM25 + vector embeddings)",
-                        info="Usually better results than keyword-only search",
-                    )
+                query_input.submit(
+                    fn=stream_response,
+                    inputs=[query_input, top_k, use_hybrid, model_choice, categories],
+                    outputs=[response_output],
+                    show_progress=True,
+                )
 
-                    model_choice = gr.Dropdown(
-                        choices=["llama3.2:1b", "llama3.2:3b", "llama3.1:8b", "qwen2.5:7b"],
-                        value=DEFAULT_MODEL,
-                        label="LLM Model",
-                        info="Larger models may give better answers but are slower",
-                    )
+            with gr.Tab("📤 上传文档"):
+                gr.Markdown(
+                    """
+                    支持 **PDF / TXT / Markdown / DOCX / Excel (.xlsx/.xls)**。
+                    上传后会写入 PostgreSQL，并切块索引到 OpenSearch，可在问答里一起检索。
+                    """
+                )
+                upload_file = gr.File(
+                    label="选择文件",
+                    file_types=UPLOAD_FILE_TYPES,
+                    type="filepath",
+                )
+                upload_title = gr.Textbox(
+                    label="标题（可选）",
+                    placeholder="例如：课程笔记 / 实验记录",
+                )
+                upload_btn = gr.Button("开始处理", variant="primary")
+                upload_status = gr.Markdown(value="选择文件后点击「开始处理」。")
 
-                    categories = gr.Textbox(
-                        label="arXiv Categories (optional)",
-                        placeholder="cs.AI, cs.LG, cs.CL",
-                        info="Comma-separated. Leave empty for all categories",
-                    )
-
-        response_output = gr.Markdown(
-            label="Answer", value="Ask a question to get started!", height=400, elem_classes=["response-markdown"]
-        )
-
-        # Examples
-        gr.Examples(
-            examples=[
-                ["What are transformers in machine learning?", 3, True, "llama3.2:1b", "cs.AI, cs.LG"],
-                ["How do convolutional neural networks work?", 5, True, "llama3.2:1b", "cs.CV, cs.LG"],
-                ["What is attention mechanism in deep learning?", 4, False, "llama3.2:1b", "cs.AI"],
-                ["Explain reinforcement learning algorithms", 3, True, "llama3.2:1b", "cs.LG, cs.AI"],
-                ["What are the latest developments in NLP?", 5, True, "llama3.2:1b", "cs.CL"],
-            ],
-            inputs=[query_input, top_k, use_hybrid, model_choice, categories],
-        )
-
-        # Handle submission
-        submit_btn.click(
-            fn=stream_response,
-            inputs=[query_input, top_k, use_hybrid, model_choice, categories],
-            outputs=[response_output],
-            show_progress=True,
-        )
-
-        # Handle Enter key
-        query_input.submit(
-            fn=stream_response,
-            inputs=[query_input, top_k, use_hybrid, model_choice, categories],
-            outputs=[response_output],
-            show_progress=True,
-        )
+                upload_btn.click(
+                    fn=upload_document,
+                    inputs=[upload_file, upload_title],
+                    outputs=[upload_status],
+                    show_progress=True,
+                )
 
         gr.Markdown(
             """

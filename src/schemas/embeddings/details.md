@@ -1,2 +1,3 @@
-- 调用jina向量API时，对jina HTTP API的请求/响应体结构的约定
-  - 定义好发送HTTP请求之后服务端接收的格式，以及服务器处理好之后返回数据的格式
+# Embeddings schemas
+
+向量相关 Pydantic 模型（若需要）放在此目录。当前 BGE 客户端直接使用 `list[float]`，无额外 HTTP schema。

@@ -13,7 +13,7 @@ HybridIndexingService把论文变成可检索的向量数据，存入Opensearch
 import logging
 from typing import Dict, List, Optional
 
-from src.services.embeddings.jina_client import JinaEmbeddingsClient
+from src.services.embeddings import EmbeddingsClient
 from src.services.opensearch.client import OpenSearchClient
 
 from .text_chunker import TextChunker
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 #
 class HybridIndexingService:
-    def __init__(self, chunker: TextChunker, embeddings_client: JinaEmbeddingsClient, opensearch_client: OpenSearchClient):
+    def __init__(self, chunker: TextChunker, embeddings_client: EmbeddingsClient, opensearch_client: OpenSearchClient):
         self.chunker = chunker
         self.embeddings_client = embeddings_client
         self.opensearch_client = opensearch_client
@@ -79,7 +79,7 @@ class HybridIndexingService:
                     "start_char": chunk.metadata.start_char,
                     "end_char": chunk.metadata.end_char,
                     "section_title": chunk.metadata.section_title,
-                    "embedding_model": "jina-embeddings-v3",
+                    "embedding_model": self.embeddings_client.model_name,
                     "title": paper_data.get("title", ""),
                     "authors": ", ".join(paper_data.get("authors", []))
                     if isinstance(paper_data.get("authors"), list)
