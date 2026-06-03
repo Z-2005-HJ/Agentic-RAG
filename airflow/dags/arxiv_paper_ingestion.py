@@ -57,7 +57,7 @@ default_args = {
 dag = DAG(
     "arxiv_paper_ingestion", #DAG的唯一ID
     default_args=default_args,
-    description="Daily arXiv CS.AI paper pipeline: fetch → store to PostgreSQL → chunk & embed → hybrid OpenSearch indexing",
+    description="arXiv 每日流水线：拉取 → 写入 PostgreSQL → 分块与 BGE 向量化 → OpenSearch 混合索引",
     schedule="0 6 * * 1-5", #Cron表达式，表示UTC时间周一到周五早上六点开始运行
     max_active_runs=1,
     catchup=False,
@@ -65,7 +65,7 @@ dag = DAG(
     #给DAG打标签，在Airflow后台可以筛选和分类
 )
 
-# Task definitions
+# 任务定义
 setup_task = PythonOperator(
     task_id="setup_environment",
     python_callable=_setup_environment,
@@ -78,7 +78,7 @@ fetch_task = PythonOperator(
     dag=dag,
 )
 
-# Hybrid search indexing task (replaces old OpenSearch task)
+# 混合检索索引任务（分块 + BGE 向量 + 写入 OpenSearch）
 index_hybrid_task = PythonOperator(
     task_id="index_papers_hybrid",
     python_callable=_index_papers_hybrid,
@@ -94,14 +94,13 @@ report_task = PythonOperator(
 cleanup_task = BashOperator(
     task_id="cleanup_temp_files",
     bash_command="""
-    echo "Cleaning up temporary files..."
-    # Remove PDFs older than 30 days to manage disk space
+    echo "正在清理临时文件..."
+    # 删除 30 天前的 PDF，控制磁盘占用
     find /tmp -name "*.pdf" -type f -mtime +30 -delete 2>/dev/null || true
-    echo "Cleanup completed"
+    echo "清理完成"
     """,
     dag=dag,
 )
 
-# Task dependencies
-# Simplified pipeline: setup -> fetch -> hybrid index -> report -> cleanup
+# 任务依赖：setup → fetch → hybrid index → report → cleanup
 setup_task >> fetch_task >> index_hybrid_task >> report_task >> cleanup_task

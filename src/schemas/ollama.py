@@ -1,19 +1,19 @@
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-#大模型LLM的答案格式标准
+
 class RAGResponse(BaseModel):
-    answer: str = Field(description="Comprehensive answer based on the provided paper excerpts")
+    answer: str = Field(description="基于所给论文片段的综合回答")
     sources: List[str] = Field(
         default_factory=list,
-        description="List of PDF URLs from papers used in the answer",
+        description="回答所依据的论文 PDF 链接列表",
     )
-    confidence: Optional[str] = Field(
-        default=None,
-        description="Confidence level: high, medium, or low based on excerpt relevance",
+    confidence: Literal["high", "medium", "low"] = Field(
+        default="medium",
+        description="置信度：high / medium / low",
     )
-    citations: Optional[List[str]] = Field(
-        default=None,
-        description="Specific arXiv IDs or paper titles referenced in the answer",
+    citations: List[str] = Field(
+        default_factory=list,
+        description="回答中引用的 arXiv ID 或论文标题",
     )

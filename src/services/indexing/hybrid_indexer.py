@@ -2,7 +2,7 @@
 HybridIndexingService把论文变成可检索的向量数据，存入Opensearch
 1.index_paper单篇论文完整入库
     TextChunker.chunk_paper论文分块
-    Jina 生成向量
+    BGE 本地嵌入模型生成向量
     OpenSearch 批量写入
 2.index_papers_batch批量论文入库
     循环调用 index_paper
@@ -30,7 +30,7 @@ class HybridIndexingService:
 
         logger.info("Hybrid indexing service initialized")
 
-    #用TextChunker将论文分块，调用jina嵌入模型生成向量，
+    #用TextChunker将论文分块，调用 BGE 嵌入模型生成向量，
     # 然后做块+向量+论文元数据的映射，最后批量写入Opensearch
     async def index_paper(self, paper_data: Dict) -> Dict[str, int]:
         arxiv_id = paper_data.get("arxiv_id")

@@ -1,7 +1,7 @@
 """
 为 BGE 向量重建 OpenSearch chunk 索引，并从 PostgreSQL 重新索引全部论文。
 
-从 Jina（1024 维）切换到 BGE（512 维）后典型用法：
+若从旧版远程嵌入（1024 维）切换到 BGE（512 维）后典型用法：
 
     uv run python scripts/reindex_opensearch.py
     uv run python scripts/reindex_opensearch.py --flush-redis
@@ -166,7 +166,7 @@ async def run_reindex(*, recreate_index: bool, flush_redis: bool, paper_batch_si
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Rebuild OpenSearch chunk index and reindex papers with BGE.")
+    parser = argparse.ArgumentParser(description="重建 OpenSearch 分块索引并使用 BGE 重新入库。")
     parser.add_argument(
         "--skip-recreate",
         action="store_true",

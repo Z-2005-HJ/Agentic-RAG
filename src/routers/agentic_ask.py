@@ -3,7 +3,7 @@ from src.dependencies import AgenticRAGDep, LangfuseDep
 from src.schemas.api.ask import AgenticAskResponse, AskRequest, FeedbackRequest, FeedbackResponse
 
 # 注册路由统一前缀 /api/v1，分类标签 agentic-rag
-router = APIRouter(prefix="/api/v1", tags=["agentic-rag"])
+router = APIRouter(prefix="/api/v1", tags=["智能体RAG"])
 
 #用户提问接口
 @router.post("/ask-agentic", response_model=AgenticAskResponse)
@@ -35,6 +35,7 @@ async def ask_agentic(
     try:
         result = await agentic_rag.ask(
             query=request.query,
+            model=request.model,
         )
 
         return AgenticAskResponse(
@@ -51,7 +52,7 @@ async def ask_agentic(
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing question: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"处理问题失败: {str(e)}")
 
 #用户反馈打分接口
 @router.post("/feedback", response_model=FeedbackResponse)
@@ -74,7 +75,7 @@ async def submit_feedback(
         if not langfuse_tracer:
             raise HTTPException(
                 status_code=503,
-                detail="Langfuse tracing is disabled. Cannot submit feedback."
+                detail="Langfuse 追踪未启用，无法提交反馈。"
             )
 
         success = langfuse_tracer.submit_feedback(
@@ -89,12 +90,12 @@ async def submit_feedback(
 
             return FeedbackResponse(
                 success=True,
-                message="Feedback recorded successfully"
+                message="反馈已记录"
             )
         else:
             raise HTTPException(
                 status_code=500,
-                detail="Failed to submit feedback to Langfuse"
+                detail="向 Langfuse 提交反馈失败"
             )
 
     except HTTPException:
@@ -102,5 +103,5 @@ async def submit_feedback(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error submitting feedback: {str(e)}"
+            detail=f"提交反馈失败: {str(e)}"
         )

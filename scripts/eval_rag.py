@@ -152,11 +152,11 @@ async def run_eval(args: argparse.Namespace) -> Path:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Evaluate RAG endpoints and export CSV for manual review.")
+    parser = argparse.ArgumentParser(description="评估 RAG 接口并导出 CSV 供人工打分。")
     parser.add_argument("--base-url", default="http://localhost:8000", help="FastAPI base URL")
     parser.add_argument("--questions", type=Path, default=DEFAULT_QUESTIONS, help="JSONL question file")
     parser.add_argument("--output", type=Path, default=None, help="Output CSV path")
-    parser.add_argument("--model", default="llama3.2:1b", help="Ollama model name")
+    parser.add_argument("--model", default="deepseek-r1:7b", help="Ollama 模型名称")
     parser.add_argument("--top-k", type=int, default=3, help="Retrieval top_k")
     parser.add_argument("--use-hybrid", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--categories", nargs="*", default=None, help="Optional arXiv category filter")

@@ -51,7 +51,7 @@ class TestAgenticAskEndpoint:
             "/api/v1/ask-agentic",
             json={
                 "query": "What is machine learning?",
-                "model": "llama3.2:1b",
+                "model": "deepseek-r1:7b",
                 "top_k": 3,
                 "use_hybrid": True
             }
@@ -102,7 +102,7 @@ class TestAgenticAskEndpoint:
         """Test agentic RAG without query field returns 422."""
         response = client.post(
             "/api/v1/ask-agentic",
-            json={"model": "llama3.2:1b"}
+            json={"model": "deepseek-r1:7b"}
         )
 
         assert response.status_code == 422
@@ -194,7 +194,7 @@ class TestAgenticAskEndpoint:
             "/api/v1/ask-agentic",
             json={
                 "query": "What is AI?",
-                "model": "llama3.2:3b"
+                "model": "deepseek-r1:7b"
             }
         )
 
@@ -202,7 +202,7 @@ class TestAgenticAskEndpoint:
         # Verify the service was called with the custom model
         mock_agentic_rag_service.ask.assert_called_once()
         call_kwargs = mock_agentic_rag_service.ask.call_args.kwargs
-        assert call_kwargs["model"] == "llama3.2:3b"
+        assert call_kwargs["model"] == "deepseek-r1:7b"
 
     def test_ask_agentic_search_mode_hybrid(self, client, mock_agentic_rag_service):
         """Test that search_mode is set correctly for hybrid search."""

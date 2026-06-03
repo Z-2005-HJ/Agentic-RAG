@@ -12,7 +12,7 @@ class GraphConfig(BaseModel):
 
     max_retrieval_attempts: 触发降级前的最大重试检索次数
     guardrail_threshold: 内容安全校验阈值（0-100）
-    model: LLM 调用使用的默认模型（例如 "llama3.2:1b"）
+    model: LLM 调用使用的默认模型（例如 "deepseek-r1:7b"）
     temperature: 大模型生成温度（0.0 = 确定性输出）
     top_k: 从搜索引擎中获取的文档数量
     use_hybrid: 是否使用混合检索（关键词 + 向量）
@@ -23,7 +23,7 @@ class GraphConfig(BaseModel):
 
     max_retrieval_attempts: int = 2
     guardrail_threshold: int = 60
-    model: str = "llama3.2:1b"
+    model: str = "llama3.2:3b"
     temperature: float = 0.0
     top_k: int = 3
     use_hybrid: bool = True

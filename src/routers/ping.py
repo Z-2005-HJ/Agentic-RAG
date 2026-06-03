@@ -11,7 +11,7 @@ from ..services.ollama import OllamaClient
 router = APIRouter()
 #创建一个健康检查路由
 
-@router.get("/health", response_model=HealthResponse, tags=["Health"])
+@router.get("/health", response_model=HealthResponse, tags=["健康检查"])
 async def health_check(settings: SettingsDep, database: DatabaseDep, opensearch_client: OpenSearchDep) -> HealthResponse:
     #注入三个依赖，配置、数据库、搜索引擎，返回格式为HealthResponse
     services = {}

@@ -10,22 +10,22 @@ from pydantic import BaseModel, Field
 #普通搜索请求体
 #普通搜索的前端请求格式
 class SearchRequest(BaseModel):
-    query: str = Field(..., min_length=1, max_length=500, description="Search query across title, abstract, and authors")
-    size: int = Field(default=10, ge=1, le=50, description="Number of results to return")
-    from_: int = Field(default=0, ge=0, alias="from", description="Offset for pagination")
-    categories: Optional[List[str]] = Field(default=None, description="Filter by categories")
-    latest_papers: bool = Field(default=False, description="Sort by publication date (newest first) instead of relevance")
+    query: str = Field(..., min_length=1, max_length=500, description="检索关键词（标题、摘要、作者）")
+    size: int = Field(default=10, ge=1, le=50, description="返回条数")
+    from_: int = Field(default=0, ge=0, alias="from", description="分页偏移量")
+    categories: Optional[List[str]] = Field(default=None, description="按分类筛选")
+    latest_papers: bool = Field(default=False, description="按发表时间排序（最新优先），否则按相关度")
 
 #混合搜索请求体
 #混合搜索的前端请求格式
 class HybridSearchRequest(BaseModel):
-    query: str = Field(..., description="Search query text", min_length=1, max_length=500)
-    size: int = Field(10, description="Number of results to return", ge=1, le=100)
-    from_: int = Field(0, description="Offset for pagination", ge=0, alias="from")
-    categories: Optional[List[str]] = Field(None, description="Filter by arXiv categories (e.g., ['cs.AI', 'cs.LG'])")
-    latest_papers: bool = Field(False, description="Sort by publication date instead of relevance")
-    use_hybrid: bool = Field(True, description="Enable hybrid search (BM25 + vector) with automatic embedding generation")
-    min_score: float = Field(0.0, description="Minimum score threshold for results", ge=0.0)
+    query: str = Field(..., description="检索文本", min_length=1, max_length=500)
+    size: int = Field(10, description="返回条数", ge=1, le=100)
+    from_: int = Field(0, description="分页偏移量", ge=0, alias="from")
+    categories: Optional[List[str]] = Field(None, description="arXiv 分类筛选，如 cs.AI、cs.LG")
+    latest_papers: bool = Field(False, description="按发表时间排序，否则按相关度")
+    use_hybrid: bool = Field(True, description="启用混合检索（BM25 + 向量，自动生成嵌入）")
+    min_score: float = Field(0.0, description="最低相关度分数阈值", ge=0.0)
 
     class Config:
         populate_by_name = True
@@ -50,18 +50,18 @@ class SearchHit(BaseModel):
     score: float
     highlights: Optional[dict] = None
 
-    chunk_text: Optional[str] = Field(None, description="Text content of the matching chunk")
-    chunk_id: Optional[str] = Field(None, description="Unique identifier of the chunk")
-    section_name: Optional[str] = Field(None, description="Section name where the chunk was found")
+    chunk_text: Optional[str] = Field(None, description="匹配 chunk 的文本内容")
+    chunk_id: Optional[str] = Field(None, description="chunk 唯一标识")
+    section_name: Optional[str] = Field(None, description="chunk 所在章节名称")
 
 #搜索接口最终返回，整个搜索接口返回的最外层结构
 class SearchResponse(BaseModel):
     query: str
     total: int
     hits: List[SearchHit]
-    size: int = Field(description="Number of results requested")
-    from_: int = Field(alias="from", description="Offset used for pagination")
-    search_mode: Optional[str] = Field(None, description="Search mode used: bm25, vector, or hybrid")
+    size: int = Field(description="请求的返回条数")
+    from_: int = Field(alias="from", description="使用的分页偏移量")
+    search_mode: Optional[str] = Field(None, description="检索模式：bm25、vector 或 hybrid")
     error: Optional[str] = None
 
     class Config:

@@ -41,7 +41,7 @@
 
 - 创建一个HybridIndexingService
 - index_paper单篇论文从字典到opensearch里有可搜chunk的完整流水线。
-- index_paper对已经传入的一篇论文字典调用TextChunker的chunk_paper把拿到的论文进行切块，然后调用jina对这些切块后的chunks进行embedding，然后再把数据写入opensearch，然后index_papers_batch循环调用index_paper把数据存入opensearch，然后总结出一个总报告。
+- index_paper对已经传入的一篇论文字典调用TextChunker的chunk_paper把拿到的论文进行切块，然后调用 BGE 对这些切块后的 chunks 进行 embedding（512 维），然后再把数据写入 opensearch，然后 index_papers_batch循环调用 index_paper把数据存入 opensearch，然后总结出一个总报告。
 - reindex_paper先清空论文在opensearch里的chunk，再重新建索引，避免新旧的chunks混在一起
 
 ## factory

@@ -13,8 +13,8 @@ from src.utils.document_sources import paper_source_url
 logger = logging.getLogger(__name__)
 
 #创建两个独立的fastapi路由实例，把普通问答接口和流式问答接口分开管理
-ask_router = APIRouter(tags=["ask"])
-stream_router = APIRouter(tags=["stream"])
+ask_router = APIRouter(tags=["问答"])
+stream_router = APIRouter(tags=["流式问答"])
 
 #统一做：向量生成 + 混合检索 + 结果清洗 + 来源整理，返回chunks文本片段，
 #sources论文 PDF 链接，展示给前端，arxiv_ids论文编号
@@ -168,7 +168,7 @@ async def ask_question(
 
         except Exception as e:
             logger.error(f"Error processing request: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=f"处理请求失败: {str(e)}")
 
 #流式输出一整个完整的问答
 @stream_router.post("/stream")

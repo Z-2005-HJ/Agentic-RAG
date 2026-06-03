@@ -12,7 +12,6 @@
 
 ### 生产级 DAG
 
-- **`hello_world_dag.py`**：第 1 周健康检查用简单 DAG  
 - **`arxiv_paper_ingestion.py`**：生产主流程——自动拉取并处理 arXiv 论文  
 
 ### 流水线能力概览
@@ -31,7 +30,6 @@ airflow/
 ├── Dockerfile              # 自定义 Airflow 镜像（含系统与 Python 依赖）
 ├── requirements-airflow.txt # DAG 运行时 Python 依赖
 └── dags/
-    ├── hello_world_dag.py
     ├── arxiv_paper_ingestion.py
     └── arxiv_ingestion/
         └── tasks.py        # 生产流水线任务（含异步处理）

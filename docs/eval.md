@@ -31,7 +31,7 @@ uv run python scripts/eval_rag.py --standard-only
 uv run python scripts/eval_rag.py --agentic-only
 
 # 指定模型与 top_k
-uv run python scripts/eval_rag.py --model llama3.2:1b --top-k 5
+uv run python scripts/eval_rag.py --model deepseek-r1:7b --top-k 5
 
 # 自定义输出路径
 uv run python scripts/eval_rag.py --output my_eval.csv

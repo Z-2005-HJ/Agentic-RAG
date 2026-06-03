@@ -14,18 +14,16 @@ class UploadParserType(str, Enum):
 
 
 class ParsedUploadDocument(BaseModel):
-    """用户上传文件解析结果（阶段 1 — 尚未写入 DB/OpenSearch）。"""
-
-    raw_text: str = Field(..., description="Full extracted plain text")
-    sections: Optional[List[Dict[str, str]]] = Field(
+    raw_text: str = Field(..., description="提取的全文纯文本")
+    sections: Optional[List[Dict[str, Any]]] = Field(
         default=None,
-        description="Optional section list with title/content keys",
+        description="可选章节列表（含 title/content 等键）",
     )
-    parser_used: UploadParserType = Field(..., description="Parser that produced the content")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Parser-specific metadata")
-    original_filename: str = Field(..., description="Original uploaded filename")
-    file_extension: str = Field(..., description="Normalized lowercase extension, e.g. .pdf")
-    title_hint: str = Field(..., description="Suggested title derived from filename or document properties")
+    parser_used: UploadParserType = Field(..., description="产生内容的解析器")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="解析器附加元数据")
+    original_filename: str = Field(..., description="原始上传文件名")
+    file_extension: str = Field(..., description="规范化小写扩展名，如 .pdf")
+    title_hint: str = Field(..., description="由文件名或文档属性推断的标题")
 
 
 class UploadIngestStatus(str, Enum):
@@ -38,10 +36,10 @@ class UploadIngestResult(BaseModel):
     document_id: UUID
     arxiv_id: str
     title: str
-    chunks_created: int = 0
-    chunks_indexed: int = 0
-    embeddings_generated: int = 0
+    original_filename: str
+    chunks_created: int
+    chunks_indexed: int
+    embeddings_generated: int
     parser_used: str
     status: UploadIngestStatus
     message: Optional[str] = None
-    original_filename: str

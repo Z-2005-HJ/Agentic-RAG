@@ -11,9 +11,9 @@ Airflow就是按照已经画好的流程图，在指定时间自动跑一串任�
 
 异步处理，对下载的PDF先打上处理标签，然后对PDF做安检，然后把PDF变成结构化数据。
 
-## Jina_client
+## BGE 本地嵌入
 
-创建一个JinaEmbeddingsClient，把链接远程API所需的所有信息准备好，包含jina API key、jina URL、header等。把一批传入的文本批量拆开，然后异步发送HTTP请求，到jina里面进行embedding，然后把向量化之后的结果也加入列表。同样也可以把用户传入的问题也按照相同的方式向量化，然后放到query列表里面，最后aclose释放连接资源。
+创建 `BGEEmbeddingsClient`，从本地 `models/bge-small-zh-v1.5` 加载 sentence-transformers 模型（**512 维**）。`embed_passages` 批量将 chunk 向量化；`embed_query` 对用户问题向量化（带 BGE 检索前缀）。无需外网 API Key。
 
 ## Opensearch_client
 
@@ -29,7 +29,7 @@ Airflow就是按照已经画好的流程图，在指定时间自动跑一串任�
 ## Hybird_indexer
 
 创建一个HybridIndexingService
-对论文批量进行：调用Text_chunker把论文切成chunks，然后调用jina对chunks列表进行embedding操作，然后把数据写入opensearch里面。
+对论文批量进行：调用 Text_chunker 把论文切成 chunks，然后调用 **BGE** 对 chunks 列表进行 embedding（512 维），然后把数据写入 opensearch 里面。
 
 ## MetadataFetcher
 

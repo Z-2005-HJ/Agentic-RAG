@@ -81,7 +81,7 @@ def test_context(mock_opensearch_client, mock_ollama_client, mock_embeddings_cli
         embeddings_client=mock_embeddings_client,
         langfuse_tracer=None,
         langfuse_enabled=False,
-        model_name="llama3.2:1b",
+        model_name="deepseek-r1:7b",
         temperature=0.0,
         top_k=3,
         max_retrieval_attempts=2,

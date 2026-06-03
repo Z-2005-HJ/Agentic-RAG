@@ -15,7 +15,7 @@ from src.services.document_upload.models import UploadIngestStatus
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["documents"])
+router = APIRouter(tags=["文档"])
 
 
 @router.post("/documents/upload", response_model=UploadResponse)
@@ -31,12 +31,12 @@ async def upload_document(
     支持格式：PDF、TXT、Markdown、DOCX、XLSX、XLS。
     """
     if not file.filename:
-        raise HTTPException(status_code=400, detail="Uploaded file must include a filename")
+        raise HTTPException(status_code=400, detail="上传文件必须包含文件名")
 
     try:
         file_bytes = await file.read()
         if not file_bytes:
-            raise HTTPException(status_code=422, detail="Uploaded file is empty")
+            raise HTTPException(status_code=422, detail="上传文件为空")
 
         result = await ingest_service.ingest_upload(
             session=session,
@@ -46,7 +46,7 @@ async def upload_document(
         )
 
         if result.status == UploadIngestStatus.FAILED:
-            raise HTTPException(status_code=422, detail=result.message or "Document ingest failed")
+            raise HTTPException(status_code=422, detail=result.message or "文档入库失败")
 
         return UploadResponse(
             document_id=result.document_id,
@@ -72,4 +72,4 @@ async def upload_document(
         raise
     except Exception as exc:
         logger.error("Unexpected upload error: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Upload failed: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"上传失败: {exc}") from exc

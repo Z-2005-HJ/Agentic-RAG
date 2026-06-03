@@ -11,7 +11,7 @@ from src.schemas.api.papers import PaperFullResponse, PaperListResponse, PaperSu
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["papers"])
+router = APIRouter(tags=["论文"])
 
 
 def _resolve_source_type(paper: Paper) -> str:
@@ -110,7 +110,7 @@ async def get_paper(
     paper = _get_paper_by_key(repo, document_key)
 
     if paper is None:
-        raise HTTPException(status_code=404, detail=f"Document not found: {document_key}")
+        raise HTTPException(status_code=404, detail=f"未找到文档: {document_key}")
 
     logger.info("Paper browse request for %s (include_full_text=%s)", paper.arxiv_id, include_full_text)
     return _to_full_response(paper, include_full_text=include_full_text)

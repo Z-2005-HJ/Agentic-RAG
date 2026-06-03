@@ -1,7 +1,3 @@
-## hello_world_dag
-
-- 证明 Airflow 容器、Python 任务、同网里的 API 和 PostgreSQL 是好的。
-
 ## arxiv_paper_ingestion
 
 - 负责定义 DAG 和任务依赖，内部顺序：setup → fetch → index → report → cleanup。
@@ -26,7 +22,7 @@
 #### ③ index_papers_hybrid
 
 - XCom 读 fetch_results，从 PG 取论文（优先「本次刚存的 N 篇」，否则近 24 小时兜底）。
-- HybridIndexingService：切块 → Jina 向量化 → bulk 写入 OpenSearch（同篇会先删旧 chunk）。
+- HybridIndexingService：切块 → BGE向量化 → bulk 写入 OpenSearch（同篇会先删旧 chunk）。
 - XCom 传出 hybrid_index_stats。
 
 

@@ -16,7 +16,7 @@
 
 > **同一套请求参数 → 直接返回上次生成的完整 `AskResponse`（含 answer、sources 等）**
 
-命中后 **跳过**：Jina/BGE embedding、OpenSearch 检索、Ollama 生成。
+命中后 **跳过**：BGE embedding、OpenSearch 检索、Ollama 生成。
 
 ---
 
@@ -106,7 +106,7 @@ Key 中 **不含** 索引版本号。论文库 reindex 或上传新文档后，�
 ```json
 {
   "query": "...",
-  "model": "llama3.2:1b",
+  "model": "deepseek-r1:7b",
   "top_k": 3,
   "use_hybrid": true,
   "categories": [],

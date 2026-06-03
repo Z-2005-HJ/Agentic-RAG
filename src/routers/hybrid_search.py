@@ -6,7 +6,7 @@ from src.schemas.api.search import HybridSearchRequest, SearchHit, SearchRespons
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/hybrid-search", tags=["hybrid-search"])
+router = APIRouter(prefix="/hybrid-search", tags=["混合检索"])
 #创建路由
 
 #混合检索接口：支持关键词搜索 + 向量搜索，
@@ -18,7 +18,7 @@ async def hybrid_search(
 #接收参数：用户请求、搜索客户端、向量服务，返回SearchResponse
     try:
         if not opensearch_client.health_check():
-            raise HTTPException(status_code=503, detail="Search service is currently unavailable")
+            raise HTTPException(status_code=503, detail="检索服务当前不可用")
 
         query_embedding = None
         if request.use_hybrid:
@@ -76,4 +76,4 @@ async def hybrid_search(
         raise
     except Exception as e:
         logger.error(f"Hybrid search error: {e}")
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"检索失败: {str(e)}")

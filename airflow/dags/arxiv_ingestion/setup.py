@@ -8,9 +8,9 @@ logger = logging.getLogger(__name__)
 
 
 def setup_environment():
-    """Setup environment and verify dependencies.
+    """初始化运行环境并校验依赖。
 
-    Creates hybrid search index with RRF pipeline.
+    创建支持向量的混合检索索引，并注册 RRF 融合流水线。
     """
     logger.info("Setting up environment for arXiv paper ingestion")
 

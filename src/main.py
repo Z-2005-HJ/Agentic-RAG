@@ -92,7 +92,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="arXiv Paper Curator API",
-    description="Personal arXiv CS.AI paper curator with RAG capabilities",
+    description="arXiv 与私有文档的生产级 RAG：混合检索、标准/智能体双模式问答",
     version=os.getenv("APP_VERSION", "0.1.0"),
     lifespan=lifespan,
 )

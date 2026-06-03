@@ -9,16 +9,16 @@ from pydantic import BaseModel, Field
 
 #定义单个服务的健康状态
 class ServiceStatus(BaseModel):
-    status: str = Field(..., description="Service status", example="healthy")
-    message: Optional[str] = Field(None, description="Status message", example="Connected successfully")
+    status: str = Field(..., description="服务状态", example="healthy")
+    message: Optional[str] = Field(None, description="状态说明", example="Connected successfully")
 
 #整体健康响应
 class HealthResponse(BaseModel):
-    status: str = Field(..., description="Overall health status", example="ok")
-    version: str = Field(..., description="Application version", example="0.1.0")
-    environment: str = Field(..., description="Deployment environment", example="development")
-    service_name: str = Field(..., description="Service identifier", example="rag-api")
-    services: Optional[Dict[str, ServiceStatus]] = Field(None, description="Individual service statuses")
+    status: str = Field(..., description="整体健康状态", example="ok")
+    version: str = Field(..., description="应用版本", example="0.1.0")
+    environment: str = Field(..., description="运行环境", example="development")
+    service_name: str = Field(..., description="服务名称", example="rag-api")
+    services: Optional[Dict[str, ServiceStatus]] = Field(None, description="各依赖组件状态")
 
     #展示实例JSON
     class Config:
