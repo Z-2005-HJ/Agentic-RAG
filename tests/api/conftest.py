@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -9,14 +8,14 @@ from src.main import app
 
 @pytest.fixture(scope="session")
 def anyio_backend() -> str:
-    """Async backend for testing."""
+    """异步测试后端（asyncio）。"""
     return "asyncio"
 
 
 @pytest.fixture
 async def client():
-    """HTTP client for API testing with mocked services."""
-    # Mock database startup and session to prevent real connections
+    """带服务 mock 的 HTTP 测试客户端。"""
+    # mock 数据库启动与会话，避免真实连接
     with (
         patch("src.db.interfaces.postgresql.PostgreSQLDatabase.startup") as mock_startup,
         patch("src.db.interfaces.postgresql.PostgreSQLDatabase.get_session") as mock_get_session,
@@ -26,18 +25,18 @@ async def client():
         patch("src.services.ollama.client.OllamaClient") as mock_ollama,
         patch("src.repositories.paper.PaperRepository.get_by_arxiv_id") as mock_get_by_id,
     ):
-        # Mock startup to do nothing
+        # mock startup 为空操作
         mock_startup.return_value = None
 
-        # Mock get_session to return a mock session
+        # mock get_session 返回假会话
         mock_session = MagicMock()
         mock_get_session.return_value.__enter__.return_value = mock_session
         mock_get_session.return_value.__exit__.return_value = None
 
-        # Mock repository methods to return None (not found) by default
+        # 默认 mock 仓储查询为未找到
         mock_get_by_id.return_value = None
 
-        # Set up other mock return values
+        # 配置其余服务 mock 返回值
         mock_os.return_value = AsyncMock()
         mock_arxiv.return_value = AsyncMock()
         mock_pdf.return_value = AsyncMock()

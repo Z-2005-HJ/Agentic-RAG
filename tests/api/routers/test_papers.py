@@ -1,4 +1,5 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
+"""API 单元测试：论文全文与摘要转换。"""
+
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 from uuid import uuid4

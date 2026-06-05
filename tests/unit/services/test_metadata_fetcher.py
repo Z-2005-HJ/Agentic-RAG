@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
 import asyncio
 import time
 from pathlib import Path
@@ -14,23 +13,23 @@ from src.services.pdf_parser.parser import PDFParserService
 
 
 class TestMetadataFetcher:
-    """Test MetadataFetcher functionality."""
+    """MetadataFetcher 功能相关测试。"""
 
     @pytest.fixture
     def mock_arxiv_client(self):
-        """Create mock ArxivClient."""
+        """创建 mock ArxivClient。"""
         client = MagicMock(spec=ArxivClient)
         return client
 
     @pytest.fixture
     def mock_pdf_parser(self):
-        """Create mock PDFParserService."""
+        """创建 mock PDFParserService。"""
         parser = MagicMock(spec=PDFParserService)
         return parser
 
     @pytest.fixture
     def metadata_fetcher(self, mock_arxiv_client, mock_pdf_parser, tmp_path):
-        """Create MetadataFetcher instance for testing."""
+        """创建测试用 MetadataFetcher 实例。"""
         return MetadataFetcher(
             arxiv_client=mock_arxiv_client,
             pdf_parser=mock_pdf_parser,
@@ -41,7 +40,7 @@ class TestMetadataFetcher:
 
     @pytest.fixture
     def sample_arxiv_papers(self):
-        """Create sample ArxivPaper objects."""
+        """创建示例 ArxivPaper 列表。"""
         return [
             ArxivPaper(
                 arxiv_id="2024.0001v1",
@@ -65,24 +64,24 @@ class TestMetadataFetcher:
 
     @pytest.fixture
     def sample_pdf_content(self):
-        """Create sample PdfContent."""
+        """创建示例 PdfContent。"""
         return PdfContent(
             raw_text="Sample PDF content", sections=[], tables=[], figures=[], parser_used=ParserType.DOCLING, metadata={}
         )
 
     def test_metadata_fetcher_initialization(self, metadata_fetcher, tmp_path):
-        """Test MetadataFetcher initialization."""
+        """MetadataFetcher 应正确初始化。"""
         assert metadata_fetcher.pdf_cache_dir == tmp_path
         assert metadata_fetcher.max_concurrent_downloads == 2
         assert metadata_fetcher.max_concurrent_parsing == 1
 
-    # Complex integration tests removed for simplicity
+    # 复杂集成测试已移除以简化用例
 
-    # Most complex tests removed - keeping only simple ones
+    # 仅保留简单用例
 
     @pytest.mark.asyncio
     async def test_empty_papers_list(self, metadata_fetcher):
-        """Test handling of empty papers list."""
+        """空论文列表应返回零计数结果。"""
         result = await metadata_fetcher.fetch_and_process_papers(max_results=0, process_pdfs=False, store_to_db=False)
 
         assert result["papers_fetched"] == 0
@@ -92,14 +91,14 @@ class TestMetadataFetcher:
 
     @pytest.mark.asyncio
     async def test_rate_limiting_respected(self, metadata_fetcher):
-        """Test that rate limiting delays are respected."""
-        # This is a basic test to ensure the rate limiting logic exists
-        # More comprehensive testing would require timing analysis
+        """空结果场景下流水线应快速结束。"""
+        # 基础用例：确认限流逻辑可执行
+        # 完整限流需耗时分析，此处从简
         metadata_fetcher.arxiv_client.fetch_papers = AsyncMock(return_value=[])
 
         start_time = time.time()
         await metadata_fetcher.fetch_and_process_papers(max_results=1)
         end_time = time.time()
 
-        # Should complete quickly for empty result
+        # 空结果应快速返回
         assert end_time - start_time < 1.0

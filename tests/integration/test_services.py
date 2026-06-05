@@ -1,4 +1,5 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
+"""集成测试：依赖外部服务的冒烟用例（需本地栈可用）。"""
+
 import pytest
 from src.config import get_settings
 from src.services.arxiv.factory import make_arxiv_client

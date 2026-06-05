@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
 import pytest
 from pydantic import ValidationError
 
@@ -14,63 +13,63 @@ from src.services.agents.models import (
 
 
 class TestGuardrailScoring:
-    """Tests for GuardrailScoring model."""
+    """GuardrailScoring 模型相关测试。"""
 
     def test_valid_scoring(self):
-        """Test creating valid guardrail scoring."""
+        """应能创建合法的护栏打分对象。"""
         scoring = GuardrailScoring(score=75, reason="Query is relevant to AI research papers")
         assert scoring.score == 75
         assert scoring.reason == "Query is relevant to AI research papers"
 
     def test_score_boundaries(self):
-        """Test score boundary validation."""
-        # Valid boundaries
+        """分数边界校验。"""
+        # 合法边界 0/50/100
         GuardrailScoring(score=0, reason="Minimum score")
         GuardrailScoring(score=100, reason="Maximum score")
         GuardrailScoring(score=50, reason="Middle score")
 
     def test_invalid_score_too_low(self):
-        """Test score below minimum."""
+        """低于最小分应校验失败。"""
         with pytest.raises(ValidationError):
             GuardrailScoring(score=-1, reason="Invalid")
 
     def test_invalid_score_too_high(self):
-        """Test score above maximum."""
+        """高于最大分应校验失败。"""
         with pytest.raises(ValidationError):
             GuardrailScoring(score=101, reason="Invalid")
 
 
 class TestGradeDocuments:
-    """Tests for GradeDocuments model."""
+    """GradeDocuments 模型相关测试。"""
 
     def test_valid_yes_grade(self):
-        """Test creating valid 'yes' grade."""
+        """应能创建 binary_score=yes 的打分。"""
         grade = GradeDocuments(binary_score="yes", reasoning="Document is highly relevant")
         assert grade.binary_score == "yes"
         assert grade.reasoning == "Document is highly relevant"
 
     def test_valid_no_grade(self):
-        """Test creating valid 'no' grade."""
+        """应能创建 binary_score=no 的打分。"""
         grade = GradeDocuments(binary_score="no", reasoning="Document is off-topic")
         assert grade.binary_score == "no"
         assert grade.reasoning == "Document is off-topic"
 
     def test_default_reasoning(self):
-        """Test default empty reasoning."""
+        """reasoning 默认应为空字符串。"""
         grade = GradeDocuments(binary_score="yes")
         assert grade.reasoning == ""
 
     def test_invalid_binary_score(self):
-        """Test invalid binary score value."""
+        """非法 binary_score 应校验失败。"""
         with pytest.raises(ValidationError):
             GradeDocuments(binary_score="maybe")
 
 
 class TestSourceItem:
-    """Tests for SourceItem model."""
+    """SourceItem 模型相关测试。"""
 
     def test_valid_source_item(self):
-        """Test creating valid source item."""
+        """应能创建合法来源项。"""
         source = SourceItem(
             arxiv_id="1706.03762",
             title="Attention Is All You Need",
@@ -85,7 +84,7 @@ class TestSourceItem:
         assert source.relevance_score == 0.95
 
     def test_default_values(self):
-        """Test default field values."""
+        """字段默认值应符合预期。"""
         source = SourceItem(
             arxiv_id="1234.5678",
             title="Test Paper",
@@ -95,7 +94,7 @@ class TestSourceItem:
         assert source.relevance_score == 0.0
 
     def test_to_dict_conversion(self):
-        """Test conversion to dictionary."""
+        """to_dict() 应返回完整字典。"""
         source = SourceItem(
             arxiv_id="1706.03762",
             title="Attention Is All You Need",
@@ -114,10 +113,10 @@ class TestSourceItem:
 
 
 class TestToolArtefact:
-    """Tests for ToolArtefact model."""
+    """ToolArtefact 模型相关测试。"""
 
     def test_valid_tool_artefact(self):
-        """Test creating valid tool artefact."""
+        """应能创建合法工具产物对象。"""
         artefact = ToolArtefact(
             tool_name="retrieve_papers",
             tool_call_id="call_123",
@@ -130,7 +129,7 @@ class TestToolArtefact:
         assert artefact.metadata["count"] == 3
 
     def test_default_metadata(self):
-        """Test default empty metadata."""
+        """metadata 默认应为空字典。"""
         artefact = ToolArtefact(
             tool_name="test_tool",
             tool_call_id="call_456",
@@ -140,10 +139,10 @@ class TestToolArtefact:
 
 
 class TestRoutingDecision:
-    """Tests for RoutingDecision model."""
+    """RoutingDecision 模型相关测试。"""
 
     def test_valid_routing_decisions(self):
-        """Test all valid routing options."""
+        """所有合法路由枚举应可通过校验。"""
         routes = ["retrieve", "out_of_scope", "generate_answer", "rewrite_query"]
 
         for route in routes:
@@ -152,21 +151,21 @@ class TestRoutingDecision:
             assert decision.reason == f"Testing {route}"
 
     def test_default_reason(self):
-        """Test default empty reason."""
+        """reason 默认应为空字符串。"""
         decision = RoutingDecision(route="retrieve")
         assert decision.reason == ""
 
     def test_invalid_route(self):
-        """Test invalid routing option."""
+        """非法 route 应校验失败。"""
         with pytest.raises(ValidationError):
             RoutingDecision(route="invalid_route")
 
 
 class TestGradingResult:
-    """Tests for GradingResult model."""
+    """GradingResult 模型相关测试。"""
 
     def test_valid_grading_result(self):
-        """Test creating valid grading result."""
+        """应能创建合法打分结果。"""
         result = GradingResult(
             document_id="doc_123",
             is_relevant=True,
@@ -179,7 +178,7 @@ class TestGradingResult:
         assert "transformers" in result.reasoning
 
     def test_default_values(self):
-        """Test default field values."""
+        """字段默认值应符合预期。"""
         result = GradingResult(
             document_id="doc_456",
             is_relevant=False
@@ -189,10 +188,10 @@ class TestGradingResult:
 
 
 class TestReasoningStep:
-    """Tests for ReasoningStep model."""
+    """ReasoningStep 模型相关测试。"""
 
     def test_valid_reasoning_step(self):
-        """Test creating valid reasoning step."""
+        """应能创建合法推理步骤。"""
         step = ReasoningStep(
             step_name="retrieve",
             description="Retrieved 3 relevant papers from OpenSearch",
@@ -204,7 +203,7 @@ class TestReasoningStep:
         assert step.metadata["retrieval_time_ms"] == 150
 
     def test_default_metadata(self):
-        """Test default empty metadata."""
+        """metadata 默认应为空字典。"""
         step = ReasoningStep(
             step_name="generate",
             description="Generated final answer"

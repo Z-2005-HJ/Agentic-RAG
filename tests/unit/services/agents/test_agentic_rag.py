@@ -1,5 +1,4 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
-"""Tests for AgenticRAGService using LangGraph 2.0 Runtime pattern."""
+"""AgenticRAGService 单元测试（LangGraph 2.0 Runtime）。"""
 
 import pytest
 from unittest.mock import AsyncMock, Mock
@@ -12,7 +11,7 @@ from src.services.agents.models import GuardrailScoring
 
 @pytest.fixture
 def test_service(mock_opensearch_client, mock_ollama_client, mock_embeddings_client):
-    """Create AgenticRAGService with mocked dependencies."""
+    """创建带 mock 依赖的 AgenticRAGService。"""
     config = GraphConfig(
         model="deepseek-r1:7b",
         temperature=0.0,
@@ -31,10 +30,10 @@ def test_service(mock_opensearch_client, mock_ollama_client, mock_embeddings_cli
 
 
 class TestAgenticRAGServiceInitialization:
-    """Tests for service initialization."""
+    """服务初始化相关测试。"""
 
     def test_service_initialization(self, test_service):
-        """Test that service initializes correctly."""
+        """服务应能正确初始化。"""
         assert test_service.opensearch is not None
         assert test_service.ollama is not None
         assert test_service.embeddings is not None
@@ -42,7 +41,7 @@ class TestAgenticRAGServiceInitialization:
         assert test_service.graph_config is not None
 
     def test_graph_config_values(self, test_service):
-        """Test graph configuration values."""
+        """图配置项取值应符合预期。"""
         assert test_service.graph_config.model == "deepseek-r1:7b"
         assert test_service.graph_config.top_k == 3
         assert test_service.graph_config.use_hybrid is True
@@ -51,11 +50,11 @@ class TestAgenticRAGServiceInitialization:
 
 
 class TestAgenticRAGAskMethod:
-    """Tests for the ask() method."""
+    """ask() 方法相关测试。"""
 
     @pytest.mark.asyncio
     async def test_ask_empty_query_validation(self, test_service):
-        """Test that empty query raises ValueError."""
+        """空查询应抛出 ValueError。"""
         with pytest.raises(ValueError, match="Query cannot be empty"):
             await test_service.ask(query="")
 
@@ -64,7 +63,7 @@ class TestAgenticRAGAskMethod:
 
     @pytest.mark.asyncio
     async def test_ask_with_model_override(self, test_service):
-        """Test ask method with model parameter override."""
+        """ask() 应支持 model 参数覆盖。"""
         mock_final_state = {
             "messages": [
                 HumanMessage(content="Test query"),
@@ -87,15 +86,15 @@ class TestAgenticRAGAskMethod:
         result = await test_service.ask(query="Test query", model="deepseek-r1:7b")
 
         assert result is not None
-        # Verify graph was called
+        # 确认已调用图执行
         test_service.graph.ainvoke.assert_called_once()
 
 
 class TestAgenticRAGGraphVisualization:
-    """Tests for graph visualization methods."""
+    """图可视化相关测试。"""
 
     def test_get_graph_mermaid(self, test_service):
-        """Test Mermaid diagram generation."""
+        """应能生成 Mermaid 图。"""
         mermaid = test_service.get_graph_mermaid()
 
         assert isinstance(mermaid, str)
@@ -104,12 +103,12 @@ class TestAgenticRAGGraphVisualization:
 
 
 class TestAgenticRAGErrorHandling:
-    """Tests for error handling scenarios."""
+    """错误处理相关测试。"""
 
     @pytest.mark.asyncio
     async def test_ask_with_graph_execution_error(self, test_service):
-        """Test error handling when graph execution fails."""
-        # Mock graph to raise an exception
+        """图执行失败时应正确抛错。"""
+        # mock 图执行抛异常
         test_service.graph.ainvoke = AsyncMock(side_effect=Exception("Graph execution failed"))
 
         with pytest.raises(Exception, match="Graph execution failed"):

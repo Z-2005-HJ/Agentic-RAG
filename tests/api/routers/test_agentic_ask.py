@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, Mock
@@ -10,7 +9,7 @@ from src import dependencies
 
 @pytest.fixture
 def mock_agentic_rag_service():
-    """Mock AgenticRAGService for API testing."""
+    """为 API 测试 mock AgenticRAGService。"""
     service = Mock(spec=AgenticRAGService)
     service.ask = AsyncMock(return_value={
         "query": "What is machine learning?",
@@ -29,8 +28,8 @@ def mock_agentic_rag_service():
 
 @pytest.fixture
 def client(mock_agentic_rag_service):
-    """FastAPI test client with mocked dependencies."""
-    # Override the dependency to return our mock service
+    """带依赖注入覆盖的 FastAPI 测试客户端。"""
+    # 覆盖依赖注入为 mock 服务
     def override_get_agentic_rag_service():
         return mock_agentic_rag_service
 
@@ -38,15 +37,15 @@ def client(mock_agentic_rag_service):
 
     yield TestClient(app)
 
-    # Clean up after test
+    # 测试结束后清理 dependency_overrides
     app.dependency_overrides.clear()
 
 
 class TestAgenticAskEndpoint:
-    """Tests for POST /api/v1/ask-agentic endpoint."""
+    """POST /api/v1/ask-agentic 接口测试。"""
 
     def test_ask_agentic_success(self, client, mock_agentic_rag_service):
-        """Test successful agentic RAG request."""
+        """Agentic 问答成功应返回完整字段。"""
         response = client.post(
             "/api/v1/ask-agentic",
             json={
@@ -60,7 +59,7 @@ class TestAgenticAskEndpoint:
         assert response.status_code == 200
         data = response.json()
 
-        # Verify response structure
+        # 校验响应结构字段
         assert "query" in data
         assert "answer" in data
         assert "sources" in data
@@ -69,7 +68,7 @@ class TestAgenticAskEndpoint:
         assert "chunks_used" in data
         assert "search_mode" in data
 
-        # Verify content
+        # 校验响应内容
         assert data["query"] == "What is machine learning?"
         assert "machine learning" in data["answer"].lower()
         assert len(data["sources"]) > 0
@@ -77,7 +76,7 @@ class TestAgenticAskEndpoint:
         assert data["retrieval_attempts"] == 1
 
     def test_ask_agentic_minimal_request(self, client, mock_agentic_rag_service):
-        """Test agentic RAG with minimal required fields."""
+        """仅传 query 时应成功。"""
         response = client.post(
             "/api/v1/ask-agentic",
             json={"query": "What is neural network?"}
@@ -88,7 +87,7 @@ class TestAgenticAskEndpoint:
         assert "answer" in data
 
     def test_ask_agentic_empty_query(self, client, mock_agentic_rag_service):
-        """Test agentic RAG with empty query returns 422."""
+        """空 query 应返回 422。"""
         mock_agentic_rag_service.ask = AsyncMock(side_effect=ValueError("Query cannot be empty"))
 
         response = client.post(
@@ -99,7 +98,7 @@ class TestAgenticAskEndpoint:
         assert response.status_code == 422
 
     def test_ask_agentic_missing_query(self, client):
-        """Test agentic RAG without query field returns 422."""
+        """缺少 query 应返回 422。"""
         response = client.post(
             "/api/v1/ask-agentic",
             json={"model": "deepseek-r1:7b"}
@@ -108,7 +107,7 @@ class TestAgenticAskEndpoint:
         assert response.status_code == 422
 
     def test_ask_agentic_service_error(self, client, mock_agentic_rag_service):
-        """Test agentic RAG when service raises exception."""
+        """服务异常应返回 500。"""
         mock_agentic_rag_service.ask = AsyncMock(side_effect=Exception("Service error"))
 
         response = client.post(
@@ -121,7 +120,7 @@ class TestAgenticAskEndpoint:
         assert "detail" in data
 
     def test_ask_agentic_with_sources(self, client, mock_agentic_rag_service):
-        """Test that sources are properly returned in response."""
+        """响应应包含 sources 列表。"""
         mock_agentic_rag_service.ask = AsyncMock(return_value={
             "query": "What is transformer architecture?",
             "answer": "Transformers use self-attention mechanisms.",
@@ -142,7 +141,7 @@ class TestAgenticAskEndpoint:
         assert "1706.03762" in data["sources"][0]
 
     def test_ask_agentic_reasoning_steps(self, client, mock_agentic_rag_service):
-        """Test that reasoning steps are included in response."""
+        """响应应包含 reasoning_steps。"""
         mock_agentic_rag_service.ask = AsyncMock(return_value={
             "query": "What is deep learning?",
             "answer": "Deep learning is...",
@@ -168,7 +167,7 @@ class TestAgenticAskEndpoint:
         assert "Query validation passed" in data["reasoning_steps"]
 
     def test_ask_agentic_with_rewritten_query(self, client, mock_agentic_rag_service):
-        """Test response when query was rewritten."""
+        """查询被改写时应返回 rewritten_query。"""
         mock_agentic_rag_service.ask = AsyncMock(return_value={
             "query": "ML stuff",
             "answer": "Machine learning...",
@@ -189,7 +188,7 @@ class TestAgenticAskEndpoint:
         assert data["retrieval_attempts"] == 2
 
     def test_ask_agentic_custom_model(self, client, mock_agentic_rag_service):
-        """Test agentic RAG with custom model parameter."""
+        """自定义 model 应传入 ask()。"""
         response = client.post(
             "/api/v1/ask-agentic",
             json={
@@ -199,13 +198,13 @@ class TestAgenticAskEndpoint:
         )
 
         assert response.status_code == 200
-        # Verify the service was called with the custom model
+        # 确认 ask() 收到自定义 model
         mock_agentic_rag_service.ask.assert_called_once()
         call_kwargs = mock_agentic_rag_service.ask.call_args.kwargs
         assert call_kwargs["model"] == "deepseek-r1:7b"
 
     def test_ask_agentic_search_mode_hybrid(self, client, mock_agentic_rag_service):
-        """Test that search_mode is set correctly for hybrid search."""
+        """use_hybrid=true 时 search_mode 应为 hybrid。"""
         response = client.post(
             "/api/v1/ask-agentic",
             json={
@@ -219,7 +218,7 @@ class TestAgenticAskEndpoint:
         assert data["search_mode"] == "hybrid"
 
     def test_ask_agentic_search_mode_bm25(self, client, mock_agentic_rag_service):
-        """Test that search_mode is set correctly for BM25 search."""
+        """use_hybrid=false 时 search_mode 应为 bm25。"""
         response = client.post(
             "/api/v1/ask-agentic",
             json={

@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
 import os
 
 import pytest
@@ -6,7 +5,7 @@ from src.config import Settings
 
 
 def test_settings_initialization():
-    """Test settings can be initialized."""
+    """Settings 应能正常初始化。"""
     settings = Settings()
 
     assert settings.app_version == "0.1.0"
@@ -16,7 +15,7 @@ def test_settings_initialization():
 
 
 def test_settings_postgres_defaults():
-    """Test PostgreSQL default configuration."""
+    """PostgreSQL 默认配置应符合预期。"""
     settings = Settings()
 
     assert "postgresql://" in settings.postgres_database_url
@@ -26,7 +25,7 @@ def test_settings_postgres_defaults():
 
 
 def test_settings_opensearch_defaults():
-    """Test OpenSearch default configuration."""
+    """OpenSearch 默认配置应符合预期。"""
     settings = Settings()
 
     assert settings.opensearch.host == "http://localhost:9200"
@@ -34,16 +33,16 @@ def test_settings_opensearch_defaults():
 
 
 def test_settings_ollama_defaults():
-    """Test Ollama default configuration."""
+    """Ollama 默认配置应符合预期。"""
     settings = Settings()
 
-    # In Docker environment, this should be ollama service host
+    # Docker 环境下默认主机为 ollama 服务
     expected_host = "http://ollama:11434" if "OLLAMA_HOST" not in os.environ else settings.ollama_host
     assert settings.ollama_host in ["http://localhost:11434", "http://ollama:11434"]
 
 
 def test_settings_upload_defaults():
-    """Test upload default configuration."""
+    """上传模块默认配置应符合预期。"""
     settings = Settings()
 
     assert settings.upload.max_file_size_mb == 50

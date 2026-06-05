@@ -1,22 +1,21 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
 import pytest
 from pydantic import ValidationError
 from src.schemas.api.search import SearchHit, SearchRequest, SearchResponse
 
 
 def test_search_request_valid():
-    """Test valid SearchRequest creation."""
+    """应能创建合法的 SearchRequest。"""
     request = SearchRequest(query="neural networks", size=10, latest_papers=True, categories=["cs.AI", "cs.LG"])
 
     assert request.query == "neural networks"
     assert request.size == 10
-    assert request.from_ == 0  # Default value
+    assert request.from_ == 0  # 默认值
     assert request.latest_papers is True
     assert request.categories == ["cs.AI", "cs.LG"]
 
 
 def test_search_request_defaults():
-    """Test SearchRequest with default values."""
+    """SearchRequest 默认值应符合预期。"""
     request = SearchRequest(query="test query")
 
     assert request.query == "test query"
@@ -27,30 +26,30 @@ def test_search_request_defaults():
 
 
 def test_search_request_validation_errors():
-    """Test SearchRequest validation errors."""
+    """SearchRequest 非法输入应触发校验错误。"""
 
-    # Empty query should fail
+    # 空 query 应校验失败
     with pytest.raises(ValidationError):
         SearchRequest(query="")
 
-    # Query too long should fail
+    # 过长 query 应校验失败
     with pytest.raises(ValidationError):
         SearchRequest(query="a" * 501)
 
-    # Invalid size should fail
+    # 非法 size 应校验失败
     with pytest.raises(ValidationError):
         SearchRequest(query="test", size=0)
 
     with pytest.raises(ValidationError):
         SearchRequest(query="test", size=51)
 
-    # Invalid from_ gets coerced to 0 due to ge=0 constraint
+    # 负数 from_ 会被约束为 0
     request = SearchRequest(query="test", from_=-1)
-    assert request.from_ == 0  # Pydantic coerces negative values to minimum
+    assert request.from_ == 0  # Pydantic 将负数约束为最小值 0
 
 
 def test_search_hit_creation():
-    """Test SearchHit creation."""
+    """应能创建 SearchHit。"""
     hit = SearchHit(
         arxiv_id="2024.12345v1",
         title="Test Paper",
@@ -69,7 +68,7 @@ def test_search_hit_creation():
 
 
 def test_search_response_creation():
-    """Test SearchResponse creation."""
+    """应能创建 SearchResponse。"""
     hits = [
         SearchHit(
             arxiv_id="2024.12345v1",

@@ -1,4 +1,3 @@
-# Bilingual comments policy / 双语注释策略：保留英文注释与 docstring；中文为补充释义。
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
@@ -11,11 +10,11 @@ from src.services.arxiv.factory import make_arxiv_client
 
 
 class TestArxivClient:
-    """Test ArxivClient functionality."""
+    """ArxivClient 功能相关测试。"""
 
     @pytest.fixture
     def arxiv_client(self):
-        """Create ArxivClient instance for testing."""
+        """创建测试用 ArxivClient 实例。"""
         from src.config import ArxivSettings
 
         settings = ArxivSettings(
@@ -30,7 +29,7 @@ class TestArxivClient:
 
     @pytest.fixture
     def mock_arxiv_response(self):
-        """Mock arXiv API XML response."""
+        """模拟 arXiv API XML 响应。"""
         return """<?xml version="1.0" encoding="UTF-8"?>
         <feed xmlns="http://www.w3.org/2005/Atom">
           <entry>
@@ -47,7 +46,7 @@ class TestArxivClient:
         </feed>"""
 
     def test_factory_creates_client(self):
-        """Test that factory creates ArxivClient instance."""
+        """工厂应创建 ArxivClient 实例。"""
         client = make_arxiv_client()
         assert isinstance(client, ArxivClient)
         assert client.search_category == "cs.AI"
@@ -55,7 +54,7 @@ class TestArxivClient:
 
     @pytest.mark.asyncio
     async def test_fetch_papers_success(self, arxiv_client, mock_arxiv_response):
-        """Test successful paper fetching."""
+        """应能成功拉取论文列表。"""
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.text = mock_arxiv_response
@@ -74,7 +73,7 @@ class TestArxivClient:
 
     @pytest.mark.asyncio
     async def test_fetch_papers_with_date_filters(self, arxiv_client, mock_arxiv_response):
-        """Test paper fetching with date filters."""
+        """带日期过滤的拉取应在 URL 中包含 submittedDate。"""
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.text = mock_arxiv_response
@@ -85,13 +84,13 @@ class TestArxivClient:
             papers = await arxiv_client.fetch_papers(max_results=1, from_date="20240101", to_date="20240131")
 
             assert len(papers) == 1
-            # Verify the URL includes date filters
+            # 请求 URL 应包含日期过滤
             call_args = mock_client.return_value.__aenter__.return_value.get.call_args[0][0]
             assert "submittedDate:[202401010000+TO+202401312359]" in call_args
 
     @pytest.mark.asyncio
     async def test_fetch_papers_http_timeout(self, arxiv_client):
-        """Test handling of HTTP timeout errors."""
+        """HTTP 超时应抛出 ArxivAPITimeoutError。"""
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(
                 side_effect=httpx.TimeoutException("Request timeout")
@@ -104,7 +103,7 @@ class TestArxivClient:
 
     @pytest.mark.asyncio
     async def test_fetch_papers_http_error(self, arxiv_client):
-        """Test handling of HTTP status errors."""
+        """HTTP 状态错误应抛出 ArxivAPIException。"""
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.status_code = 500
@@ -119,7 +118,7 @@ class TestArxivClient:
 
     @pytest.mark.asyncio
     async def test_fetch_paper_by_id_success(self, arxiv_client, mock_arxiv_response):
-        """Test fetching a single paper by ID."""
+        """应能按 arxiv_id 拉取单篇论文。"""
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.text = mock_arxiv_response
@@ -135,7 +134,7 @@ class TestArxivClient:
 
     @pytest.mark.asyncio
     async def test_fetch_paper_by_id_not_found(self, arxiv_client):
-        """Test handling when single paper is not found."""
+        """单篇不存在时应返回 None。"""
         empty_response = """<?xml version="1.0" encoding="UTF-8"?>
         <feed xmlns="http://www.w3.org/2005/Atom">
         </feed>"""
@@ -152,7 +151,7 @@ class TestArxivClient:
             assert paper is None
 
     def test_parse_response_invalid_xml(self, arxiv_client):
-        """Test handling of invalid XML response."""
+        """非法 XML 应抛出 ArxivParseError。"""
         invalid_xml = "This is not valid XML"
 
         with pytest.raises(ArxivParseError) as exc_info:
@@ -162,7 +161,7 @@ class TestArxivClient:
 
     @pytest.mark.asyncio
     async def test_download_pdf_cached(self, arxiv_client):
-        """Test that cached PDFs are returned without downloading."""
+        """缓存命中时不应重复下载 PDF。"""
         paper = ArxivPaper(
             arxiv_id="2024.0001v1",
             title="Test Paper",
@@ -180,13 +179,13 @@ class TestArxivClient:
             assert pdf_path.name == "2024.0001v1.pdf"
 
     def test_rate_limiting(self, arxiv_client):
-        """Test rate limiting delay calculation."""
+        """限流相关字段应正确初始化。"""
         import time
 
-        # Mock the last request time
+        # mock 上次请求时间
         arxiv_client._last_request_time = time.time() - 1.0  # 1 second ago
 
-        # This would normally cause a delay in real usage
-        # In tests, we just verify the logic exists
+        # 生产环境会触发限流等待
+        # 测试中仅校验限流字段存在
         assert arxiv_client.rate_limit_delay == 0.1  # Our test value
         assert arxiv_client._last_request_time is not None
