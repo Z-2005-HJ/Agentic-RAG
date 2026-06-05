@@ -2,7 +2,7 @@
 
 面向 **学术论文 + 私有文档** 的检索增强生成（RAG）：离线摄取（Airflow）、混合检索（OpenSearch + BGE）、标准 / Agentic 双模式问答、Redis 缓存与 Langfuse 可观测。
 
-> 本项目在课程仓库 [jamwithai/production-agentic-rag-course](https://github.com/jamwithai/production-agentic-rag-course) 基础上扩展与改进（私有文档上传、BGE 本地向量、全文 API、作品集文档与部署实践等）。课程原版说明与架构动图见 [README.course.md](README.course.md)。
+> 个人作品集项目；在 [jamwithai/production-agentic-rag-course](https://github.com/jamwithai/production-agentic-rag-course) 基础上扩展（私有文档上传、BGE 本地向量、全文 API、部署实践等）。
 
 ---
 
